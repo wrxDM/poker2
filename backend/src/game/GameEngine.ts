@@ -753,9 +753,9 @@ export class GameEngine {
         const result = results.find(r => r.playerId === win.playerId);
         if (player && result) {
           // 同步筹码到 UserService
-          if (!player.userId.startsWith('bot_')) {
-            this.userService.setChips(player.userId, player.chips);
-          }
+          // if (!player.userId.startsWith('bot_')) {
+          //   this.userService.setChips(player.userId, player.chips);
+          // }
           log.info(`[showdown] ${player.username} 赢得底池 ${pot.amount} 中的 ${win.amount}，牌型: ${result.evaluated.description}`);
           winners.push({
             playerId: player.userId,

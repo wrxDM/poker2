@@ -224,7 +224,16 @@ export class BetManager {
       }
       console.log(`[PotDistribution] Loop #${loop} sharePerWinner=${sharePerWinner}, winAmounts:`, winAmounts);
 
-      // Eligible players for this pot (all with remaining chips > 0)
+      pots.push({
+        amount: layerPot,
+        winners: winners.map(w => w.playerId),
+        winAmounts,
+      });
+
+      strengthGroups[0] = strengthGroups[0].filter(w => (remaining.get(w.playerId) || 0) > 0);
+      if (strengthGroups[0].length === 0) {
+        strengthGroups.shift();
+      }
       // Reduce total distributable chips
       distributableChips -= layerPot;
       console.log(`[PotDistribution] Loop #${loop} distributableChips after deduction: ${distributableChips}`);

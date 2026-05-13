@@ -12,99 +12,26 @@ import type { PublicRoomState, HandInfo, HandAction, ShowdownInfo } from '../typ
 
 const SEAT_POSITIONS = [
   { bottom: '0', left: '50%', transform: 'translateX(-50%)' },        // 0 - bottom center (self)
-  { bottom: '18%', right: '10%' },                                     // 1 - bottom right
-  { bottom: '38%', right: '2%' },                                      // 2 - mid right
-  { bottom: '58%', right: '2%' },                                      // 3 - top right
-  { top: '10%', right: '10%' },                                        // 4 - top right corner
-  { top: '10%', left: '50%', transform: 'translateX(-50%)' },          // 5 - top center
-  { top: '10%', left: '10%' },                                        // 6 - top left corner
-  { bottom: '58%', left: '2%' },                                       // 7 - top left
-  { bottom: '38%', left: '2%' },                                       // 8 - mid left
-  { bottom: '18%', left: '10%' },                                      // 9 - bottom left
+  { bottom: '18%', left: '20%' },                                      // 1 - bottom left
+  { bottom: '38%', left: '5%' },                                       // 2 - mid left
+  { bottom: '58%', left: '5%' },                                       // 3 - top left
+  { top: '10%', left: '20%' },                                        // 4 - top left corner
+  { top: '5%', left: '50%', transform: 'translateX(-50%)' },          // 5 - top center
+  { top: '10%', right: '20%' },                                        // 6 - top right corner
+  { bottom: '58%', right: '5%' },                                       // 7 - top right
+  { bottom: '38%', right: '5%' },                                      // 8 - mid right
+  { bottom: '18%', right: '20%' },                                     // 9 - bottom right
 ];
 
-// 动态计算均匀分布的位置
-const getUniformPosition = (playerSeat: number, totalPlayers: number, mySeat: number) => {
-  // 将当前玩家放在底部中间位置
-  const adjustedSeat = (playerSeat - mySeat + totalPlayers) % totalPlayers;
-  
-  // 计算每个玩家之间的角度间隔（均匀分布在椭圆上）
-  // 底部区域占 40%，顶部区域占 40%，两侧各 10%
-  // 定义一个更均匀的分布：围绕椭圆中心分布
-  const positions: Array<{ left?: string; right?: string; top?: string; bottom?: string; transform?: string }> = [];
-  
-  if (totalPlayers === 1) {
-    // 单独一个玩家在底部中间
-    positions.push({ bottom: '0', left: '50%', transform: 'translateX(-50%)' });
-  } else if (totalPlayers === 2) {
-    // 两个玩家：底部中间和顶部中间
-    positions.push({ bottom: '0', left: '50%', transform: 'translateX(-50%)' });
-    positions.push({ top: '10%', left: '50%', transform: 'translateX(-50%)' });
-  } else if (totalPlayers === 3) {
-    // 三个玩家：底部中间、右侧、左侧
-    positions.push({ bottom: '0', left: '50%', transform: 'translateX(-50%)' });
-    positions.push({ top: '15%', right: '8%' });
-    positions.push({ top: '15%', left: '8%' });
-  } else if (totalPlayers === 4) {
-    // 四个玩家：底部、右下、左下、顶部
-    positions.push({ bottom: '0', left: '50%', transform: 'translateX(-50%)' });
-    positions.push({ bottom: '15%', right: '8%' });
-    positions.push({ bottom: '15%', left: '8%' });
-    positions.push({ top: '10%', left: '50%', transform: 'translateX(-50%)' });
-  } else if (totalPlayers === 5) {
-    // 五个玩家
-    positions.push({ bottom: '0', left: '50%', transform: 'translateX(-50%)' });
-    positions.push({ bottom: '12%', right: '8%' });
-    positions.push({ top: '18%', right: '5%' });
-    positions.push({ top: '18%', left: '5%' });
-    positions.push({ bottom: '12%', left: '8%' });
-  } else if (totalPlayers === 6) {
-    // 六个玩家：底部、右下、右上、左上、左下、顶部
-    positions.push({ bottom: '0', left: '50%', transform: 'translateX(-50%)' });
-    positions.push({ bottom: '15%', right: '8%' });
-    positions.push({ top: '15%', right: '8%' });
-    positions.push({ top: '10%', left: '50%', transform: 'translateX(-50%)' });
-    positions.push({ top: '15%', left: '8%' });
-    positions.push({ bottom: '15%', left: '8%' });
-  } else if (totalPlayers === 7) {
-    // 七个玩家
-    positions.push({ bottom: '0', left: '50%', transform: 'translateX(-50%)' });
-    positions.push({ bottom: '10%', right: '12%' });
-    positions.push({ bottom: '45%', right: '3%' });
-    positions.push({ top: '12%', right: '8%' });
-    positions.push({ top: '10%', left: '50%', transform: 'translateX(-50%)' });
-    positions.push({ top: '12%', left: '8%' });
-    positions.push({ bottom: '45%', left: '3%' });
-    positions.push({ bottom: '10%', left: '12%' });
-  } else if (totalPlayers === 8) {
-    // 八个玩家
-    positions.push({ bottom: '0', left: '50%', transform: 'translateX(-50%)' });
-    positions.push({ bottom: '10%', right: '12%' });
-    positions.push({ bottom: '38%', right: '3%' });
-    positions.push({ top: '12%', right: '8%' });
-    positions.push({ top: '10%', left: '50%', transform: 'translateX(-50%)' });
-    positions.push({ top: '12%', left: '8%' });
-    positions.push({ bottom: '38%', left: '3%' });
-    positions.push({ bottom: '10%', left: '12%' });
-  } else if (totalPlayers === 9) {
-    // 九个玩家
-    positions.push({ bottom: '0', left: '50%', transform: 'translateX(-50%)' });
-    positions.push({ bottom: '8%', right: '14%' });
-    positions.push({ bottom: '30%', right: '3%' });
-    positions.push({ top: '12%', right: '5%' });
-    positions.push({ top: '8%', right: '5%' });
-    positions.push({ top: '10%', left: '50%', transform: 'translateX(-50%)' });
-    positions.push({ top: '8%', left: '5%' });
-    positions.push({ top: '12%', left: '5%' });
-    positions.push({ bottom: '30%', left: '3%' });
-    positions.push({ bottom: '8%', left: '14%' });
-  } else {
-    // 10+ 玩家使用原始固定位置
-    const adjustedIndex = (adjustedSeat % SEAT_POSITIONS.length);
-    return SEAT_POSITIONS[adjustedIndex];
-  }
-  
-  return positions[adjustedSeat] || { bottom: '0', left: '50%', transform: 'translateX(-50%)' };
+// 根据 SEAT_POSITIONS 动态计算玩家位置：mySeat 永远在 SEAT_POSITIONS[0]（底部中心）
+const getUniformPosition = (playerSeat: number, totalPlayers: number) => {
+  // 计算旋转偏移量，使 mySeat 位于 SEAT_POSITIONS[0]
+  const gap = 10 / totalPlayers;
+  console.log('[DEBUG] totalPlayers:', totalPlayers);
+  console.log('[DEBUG] playerSeat:', playerSeat);
+  console.log('[DEBUG] gap:', gap);
+  console.log('[DEBUG] SEAT_POSITIONS[Math.floor(playerSeat * gap)]:', SEAT_POSITIONS[Math.floor(playerSeat * gap)]);
+  return SEAT_POSITIONS[Math.floor(playerSeat * gap)];
 };
 
 export function GameTable() {
@@ -215,7 +142,6 @@ export function GameTable() {
 
   const { currentTurn, dealerSeat, players, communityCards, pot, sidePots, round, blindSmall, blindBig } = currentRoom;
   const myPlayer = players.find(p => p.userId === user?.id);
-  const mySeat = myPlayer?.seat ?? 0;
   const isMyTurn = myPlayer?.seat === currentTurn;
 
   const isWaiting = currentRoom.status === 'waiting';
@@ -225,7 +151,7 @@ export function GameTable() {
 
   // 动态计算均匀分布的位置
   const getPosition = (playerSeat: number) => {
-    return getUniformPosition(playerSeat, players.length, mySeat);
+    return getUniformPosition(playerSeat, players.length);
   };
 
   return (
@@ -280,6 +206,8 @@ export function GameTable() {
             player={player}
             isCurrentTurn={player.seat === currentTurn}
             isDealer={player.seat === dealerSeat}
+            isSmallBlind={player.seat === currentRoom.smallBlindSeat}
+            isBigBlind={player.seat === currentRoom.bigBlindSeat}
             isMySeat={player.userId === user?.id}
             position={getPosition(player.seat)}
           />

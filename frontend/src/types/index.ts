@@ -20,6 +20,7 @@ export interface PlayerPublic {
   allin: boolean;
   disconnected: boolean;
   lastAction?: HandAction;
+  isBot?: boolean;
 }
 
 export interface PublicRoomState {
@@ -35,6 +36,8 @@ export interface PublicRoomState {
   currentTurn: number;
   round: GameRound;
   dealerSeat: number;
+  smallBlindSeat: number;
+  bigBlindSeat: number;
   lastRaise: number;
   minRaise: number;
 }

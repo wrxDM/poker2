@@ -55,6 +55,8 @@ export interface RoomState {
   currentTurn: number;
   round: GameRound;
   dealerSeat: number;
+  smallBlindSeat: number;
+  bigBlindSeat: number;
   lastRaise: number;
   minRaise: number;
   createdAt: number;

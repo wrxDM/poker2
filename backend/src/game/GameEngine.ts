@@ -68,6 +68,8 @@ export class GameEngine {
       currentTurn: -1,
       round: 'waiting',
       dealerSeat: 0,
+      smallBlindSeat: 0,
+      bigBlindSeat: 0,
       lastRaise: 0,
       minRaise: params.blindBig,
       createdAt: Date.now(),
@@ -253,10 +255,13 @@ export class GameEngine {
 
     // Post blinds
     log.debug('[beginHand] 开始下盲注...');
+
+    // Store small/big blind seat positions
+    this.room.smallBlindSeat = this.getNextActiveSeat(this.room.dealerSeat);
+    this.room.bigBlindSeat = this.getNextActiveSeat(this.room.smallBlindSeat);
     this.postBlinds();
 
-    // Set first turn
-    this.room.currentTurn = this.getNextActiveSeat(this.room.dealerSeat);
+    this.room.currentTurn = this.getNextActiveSeat(this.room.bigBlindSeat);
     const firstPlayer = this.room.players.find(p => p.seat === this.room.currentTurn);
     log.debug(`[beginHand] 庄家座位: ${this.room.dealerSeat}，当前玩家: ${firstPlayer?.username}，座位: ${this.room.currentTurn}`);
 
@@ -283,7 +288,7 @@ export class GameEngine {
     const players = this.room.players;
 
     // Small blind: dealer seat
-    const sbSeat = this.room.dealerSeat;
+    const sbSeat = this.room.smallBlindSeat;
     const sbPlayer = players.find(p => p.seat === sbSeat);
     if (sbPlayer) {
       const sbAmount = Math.min(this.room.blindSmall, sbPlayer.chips);
@@ -550,19 +555,22 @@ export class GameEngine {
           log.debug(`[advanceGame] 发${this.room.round === 'turn' ? '转' : '河'}牌: ${cardDesc}，公共牌: ${allCards}，牌堆剩余: ${this.room.deck.length}`);
         }
 
-        // 找到第一个未弃牌/未全下的玩家
-        const firstPlayer = this.room.players.find(p => !p.folded && !p.allin);
-        if (firstPlayer) {
-          this.room.currentTurn = firstPlayer.seat;
-          log.debug(`[advanceGame] 第一行动玩家: ${firstPlayer.username}，座位: ${firstPlayer.seat}`);
+        // 翻后从小盲开始行动（第一个活跃玩家，从小盲开始找）
+        const sbPlayer = this.room.players.find(p => !p.folded && !p.allin && p.seat === this.room.smallBlindSeat);
+        if (sbPlayer) {
+          this.room.currentTurn = sbPlayer.seat;
+          log.debug(`[advanceGame] 翻后第一行动玩家(小盲): ${sbPlayer.username}，座位: ${sbPlayer.seat}`);
         } else {
-          // 没有活跃玩家但不是所有玩家都 allin，说明出错了
-          log.warn(`[advanceGame] 未找到活跃玩家，但并非所有玩家都 allin`);
-          // 如果还有未弃牌玩家（allin），直接进入摊牌
-          if (unfolderPlayers.length > 1) {
-            this.room.round = 'showdown';
-            this.showdown();
-            return;
+          // 小盲已弃牌或allin，找下一个活跃玩家
+          let next = this.getNextActiveSeat(this.room.smallBlindSeat);
+          while (next !== this.room.smallBlindSeat) {
+            const p = this.room.players.find(p2 => p2.seat === next);
+            if (p && !p.folded && !p.allin) {
+              this.room.currentTurn = p.seat;
+              log.debug(`[advanceGame] 翻后第一行动玩家: ${p.username}，座位: ${p.seat}`);
+              break;
+            }
+            // next = this.getNextActiveSeat(next);
           }
         }
         

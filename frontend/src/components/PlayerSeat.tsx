@@ -5,6 +5,8 @@ interface PlayerSeatProps {
   player: PlayerPublic;
   isCurrentTurn: boolean;
   isDealer: boolean;
+  isSmallBlind: boolean;
+  isBigBlind: boolean;
   isMySeat: boolean;
   position: { top?: string; bottom?: string; left?: string; right?: string };
 }
@@ -13,6 +15,8 @@ export function PlayerSeat({
   player,
   isCurrentTurn,
   isDealer,
+  isSmallBlind,
+  isBigBlind,
   isMySeat,
   position,
 }: PlayerSeatProps) {
@@ -47,13 +51,28 @@ export function PlayerSeat({
           ${isCurrentTurn ? 'border-yellow-400 ring-2 ring-yellow-400/50' : ''}
         `}
       >
-        {/* Dealer / Turn indicator */}
+        {/* Dealer / Turn / Blind / Bot indicator */}
         {isDealer && (
           <div className="absolute -top-2 -left-1 w-5 h-5 bg-yellow-500 text-black text-xs font-bold rounded-full flex items-center justify-center border border-yellow-600">
             D
           </div>
         )}
-        {isCurrentTurn && (
+        {isSmallBlind && !isDealer && (
+          <div className="absolute -top-2 -left-1 w-5 h-5 bg-pink-500 text-white text-xs font-bold rounded-full flex items-center justify-center border border-pink-600">
+            SB
+          </div>
+        )}
+        {isBigBlind && !isDealer && (
+          <div className="absolute -top-2 -left-1 w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full flex items-center justify-center border border-blue-600">
+            BB
+          </div>
+        )}
+        {player.isBot && (
+          <div className="absolute -top-2 -right-1 w-5 h-5 bg-purple-500 text-white text-xs font-bold rounded-full flex items-center justify-center border border-purple-600">
+            🤖
+          </div>
+        )}
+        {isCurrentTurn && !player.isBot && (
           <div className="absolute -top-2 -right-1 w-5 h-5 bg-green-500 text-black text-xs font-bold rounded-full flex items-center justify-center border border-green-600 animate-pulse">
             ▶
           </div>

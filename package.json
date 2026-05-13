@@ -1,0 +1,25 @@
+{
+  "name": "poker2",
+  "version": "1.0.0",
+  "private": true,
+  "description": "H5 Texas Hold'em Poker - Multiplayer Online",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm -w backend run dev",
+    "dev:frontend": "npm -w frontend run dev",
+    "build": "npm -w backend run build && npm -w frontend run build",
+    "start": "docker-compose up -d"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "concurrently": "^8.2.2",
+    "jest": "^30.4.2",
+    "playwright": "^1.59.1",
+    "ts-jest": "^29.4.9",
+    "vitest": "^4.1.5"
+  }
+}

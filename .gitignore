@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Build output
+backend/dist/
+frontend/dist/
+
+# Environment files (contain secrets)
+backend/.env
+.env
+.env.*
+!.env.example
+
+# Test results
+test-results/
+
+# Debug/test files
+debug-hands.ts
+debug-hands.test.ts
+
+# Logs
+*.log
+npm-debug.log*
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Vite cache
+frontend/.vite/
+
+# Vitest
+*.local

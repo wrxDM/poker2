@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-felt: #2d5016;
+  --color-felt-light: #3d6b1f;
+  --color-rail: #4a3728;
+  --color-chip-red: #c0392b;
+  --color-chip-blue: #2980b9;
+  --color-chip-green: #27ae60;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #111;
+  color: #ecf0f1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #1a1a1a; }
+::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+/* Card flip animation */
+@keyframes cardDeal {
+  from {
+    transform: translateY(-200px) rotateY(180deg) scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes chipStack {
+  from {
+    transform: scale(0) translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.animate-card-deal {
+  animation: cardDeal 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-chip-stack {
+  animation: chipStack 0.3s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Turn indicator glow */
+.turn-glow {
+  box-shadow: 0 0 20px rgba(241, 196, 15, 0.6), 0 0 40px rgba(241, 196, 15, 0.3);
+}
+
+/* Chip colors */
+.chip-red { background: radial-gradient(circle at 30% 30%, #e74c3c, #c0392b 60%, #a93226); }
+.chip-blue { background: radial-gradient(circle at 30% 30%, #3498db, #2980b9 60%, #1f618d); }
+.chip-green { background: radial-gradient(circle at 30% 30%, #2ecc71, #27ae60 60%, #1e8449); }
+.chip-black { background: radial-gradient(circle at 30% 30%, #333, #1a1a1a 60%, #000); }
+
+/* Table felt texture */
+.table-felt {
+  background:
+    radial-gradient(ellipse at center, #3d6b1f 0%, #2d5016 60%, #1e3a0f 100%);
+  box-shadow:
+    inset 0 0 80px rgba(0,0,0,0.5),
+    inset 0 0 20px rgba(0,0,0,0.3);
+}
+
+/* Action button styles */
+.action-btn {
+  @apply px-6 py-3 rounded-xl font-bold text-white transition-all duration-200;
+  @apply active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed;
+  @apply shadow-lg;
+}
+
+.action-btn-fold { @apply bg-red-600 hover:bg-red-700; }
+.action-btn-check { @apply bg-blue-600 hover:bg-blue-700; }
+.action-btn-call { @apply bg-green-600 hover:bg-green-700; }
+.action-btn-raise { @apply bg-yellow-600 hover:bg-yellow-700; }
+.action-btn-allin { @apply bg-purple-600 hover:bg-purple-700; }
+
+/* Responsive table */
+@media (max-width: 640px) {
+  .game-table { transform-origin: center center; }
+}

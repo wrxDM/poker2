@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { socketService } from '../services/socket';
@@ -41,6 +41,50 @@ const getUniformPosition = (playerSeat: number, totalPlayers: number) => {
 export function GameTable() {
   const navigate = useNavigate();
   const { user, token, currentRoom, myHand, showdown, setRoom, setMyHand, setShowdown, clearRoom } = useGameStore();
+  const [timerSeconds, setTimerSeconds] = useState(30);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Turn Timer ───────────────────────────────────────────
+  const activeRounds = ['preflop', 'flop', 'turn', 'river'] as const;
+
+  useEffect(() => {
+    const { currentTurn, round } = currentRoom ?? {};
+    const myPlayer = currentRoom?.players.find(p => p.userId === user?.id);
+    const isMyTurn = myPlayer?.seat === currentTurn;
+
+    if (!currentRoom || !user) return;
+
+    if (isMyTurn && activeRounds.includes(round as typeof activeRounds[number])) {
+      // Start / reset timer
+      setTimerSeconds(30);
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
+        setTimerSeconds(prev => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current!);
+            timerRef.current = null;
+            socketService.takeAction('fold').catch(() => {});
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      // Not my turn — clear timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setTimerSeconds(30);
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [currentRoom?.currentTurn, currentRoom?.round, user]);
 
   useEffect(() => {
     if (!token || !user) {
@@ -297,6 +341,7 @@ export function GameTable() {
           chips={myPlayer?.chips ?? 0}
           isMyTurn={!!isMyTurn}
           onAction={handleAction}
+          timerSeconds={timerSeconds}
         />
       )}
 

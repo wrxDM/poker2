@@ -38,7 +38,7 @@ export class GameEngine {
   private betManager: BetManager;
   private onEvent: EventCallback;
   private actionTimer?: ReturnType<typeof setTimeout>;
-  private actionTimeoutMs = 30000;
+  private actionTimeoutMs = 350000;
   private bots: Map<string, BotPlayer> = new Map();
   private botActionDelay = 1500; // 机器人延迟决策时间(ms)
   private userService: UserService;
@@ -157,6 +157,9 @@ export class GameEngine {
       if (player) {
         this.userService.setChips(userId, player.chips);
         log.debug(`removePlayer: 同步玩家 ${player.username} 剩余筹码 ${player.chips} 到 UserService`);
+      }
+      if (this.room.currentTurn === player?.seat) {
+        this.onActionTimeout();
       }
     }
     this.room.players = this.room.players.filter(p => p.userId !== userId);
@@ -646,6 +649,7 @@ export class GameEngine {
       log.debug(`[getNextActiveSeat] 没有活跃玩家，返回 -1`);
       return -1;
     }
+    this.startActionTimer()
 
     const sortedSeats = activePlayers.map(p => p.seat).sort((a, b) => a - b);
     log.debug(`[getNextActiveSeat] 活跃玩家座位: ${sortedSeats.join(', ')}，从座位 ${from} 找下一个`);

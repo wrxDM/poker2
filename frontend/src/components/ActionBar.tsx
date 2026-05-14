@@ -11,6 +11,7 @@ interface ActionBarProps {
   chips: number;
   isMyTurn: boolean;
   onAction: (action: HandAction, amount?: number) => void;
+  timerSeconds?: number;
 }
 
 export function ActionBar({
@@ -23,6 +24,7 @@ export function ActionBar({
   chips,
   isMyTurn,
   onAction,
+  timerSeconds,
 }: ActionBarProps) {
   const [showRaise, setShowRaise] = useState(false);
   const [raiseValue, setRaiseValue] = useState(minRaise);
@@ -34,6 +36,10 @@ export function ActionBar({
       </div>
     );
   }
+
+  const timerColor = timerSeconds !== undefined
+    ? timerSeconds <= 5 ? 'text-red-400' : timerSeconds <= 10 ? 'text-yellow-400' : 'text-green-400'
+    : '';
 
   if (showRaise) {
     return (
@@ -89,7 +95,15 @@ export function ActionBar({
 
   return (
     <div className="w-full bg-black/60 backdrop-blur-md border-t border-white/10 py-4 px-6">
-      <div className="max-w-lg mx-auto flex gap-3 flex-wrap justify-center">
+      <div className="max-w-lg mx-auto flex gap-3 flex-wrap justify-center items-center">
+        {/* Timer */}
+        {timerSeconds !== undefined && timerSeconds > 0 && (
+          <div className={`flex-shrink-0 w-12 h-12 rounded-full border-2 flex items-center justify-center font-bold text-lg ${timerColor}`}
+               style={{ borderColor: 'currentColor' }}>
+            {timerSeconds}
+          </div>
+        )}
+
         {/* Fold */}
         <button
           onClick={() => onAction('fold')}

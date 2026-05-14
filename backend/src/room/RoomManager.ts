@@ -61,7 +61,7 @@ export class RoomManager {
     }
 
     const state = engine.getRoom();
-    if (state.status !== 'waiting') {
+    if (state.status === 'playing') {
       return { success: false, error: '游戏已开始，无法加入' };
     }
 

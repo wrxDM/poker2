@@ -54,7 +54,6 @@ export interface RoomState {
   players: PlayerInRoom[];
   communityCards: Card[];
   pot: number;
-  sidePots: number[];
   currentTurn: number;
   round: GameRound;
   dealerSeat: number;
@@ -68,6 +67,7 @@ export interface RoomState {
 
 export interface PublicRoomState extends Omit<RoomState, 'deck'> {
   players: Omit<PlayerInRoom, 'hand'>[];
+  playerCount: number;
 }
 
 export interface User {

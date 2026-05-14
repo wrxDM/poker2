@@ -22,8 +22,8 @@ export function Lobby() {
   const [joinRoomId, setJoinRoomId] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [createName, setCreateName] = useState('');
-  const [blindSmall, setBlindSmall] = useState(10);
-  const [blindBig, setBlindBig] = useState(20);
+  const [blindSmall, setBlindSmall] = useState(5);
+  const [blindBig, setBlindBig] = useState(10);
 
   const syncUserInfo = useCallback(async () => {
     try {
@@ -235,14 +235,36 @@ export function Lobby() {
                   className="flex items-center justify-between bg-white/5 hover:bg-white/10 rounded-xl px-4 py-3 transition-colors cursor-pointer"
                   onClick={() => handleJoinRoom(room.roomId)}
                 >
-                  <div>
-                    <div className="text-white font-bold">{room.name}</div>
-                    <div className="text-white/40 text-xs">
-                      {room.blindSmall}/{room.blindBig} · {room.playerCount} 人
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <div className="text-white font-bold">{room.name}</div>
+                      <div className="text-white/40 text-xs">
+                        {room.blindSmall}/{room.blindBig}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-yellow-400 font-bold text-sm font-mono">
-                    #{room.roomId}
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <div className="flex items-center gap-2 justify-end">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+                            room.status === 'waiting'
+                              ? 'bg-green-500/20 text-green-400'
+                              : room.status === 'playing'
+                              ? 'bg-red-500/20 text-red-400'
+                              : 'bg-gray-500/20 text-gray-400'
+                          }`}
+                        >
+                          {room.status === 'waiting' ? '等待中' : room.status === 'playing' ? '进行中' : room.status}
+                        </span>
+                        <span className="text-white/40 text-xs">
+                          👥 {room.playerCount}人
+                        </span>
+                      </div>
+                      <div className="text-yellow-400 font-bold text-sm font-mono">
+                        #{room.roomId}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}

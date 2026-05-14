@@ -63,7 +63,6 @@ export class GameEngine {
       players: [],
       communityCards: [],
       pot: 0,
-      sidePots: [],
       currentTurn: -1,
       round: 'waiting',
       dealerSeat: 0,
@@ -185,6 +184,7 @@ export class GameEngine {
         const { hand: __, ...pub } = p;
         return pub;
       }),
+      playerCount: this.room.players.length,
     };
   }
 
@@ -226,7 +226,6 @@ export class GameEngine {
     this.room.deck = shuffleDeck(createDeck());
     log.debug(`[beginHand] 牌堆创建并洗牌完成，剩余牌数: ${this.room.deck.length}`);
     this.room.pot = 0;
-    this.room.sidePots = [];
     this.betManager.resetAll(this.room.players);
     // 重置每局的下注记录（用于摊牌时计算底池）
 
@@ -695,7 +694,7 @@ export class GameEngine {
     }
 
     this.room.pot = 0;
-    this.room.status = 'waiting';
+    this.room.status = 'finished';
     this.room.round = 'finished';
 
     this.onEvent('game:showdown', {
@@ -741,7 +740,6 @@ export class GameEngine {
     log.debug(`[startNextHand] 庄家移动: ${lastDealerIndex} -> ${nextDealerIndex}，新庄家座位: ${this.room.dealerSeat}`);
 
     // 重置游戏状态
-    this.room.round = 'waiting';
     this.room.communityCards = [];
     this.betManager.resetAll(this.room.players);
 

@@ -149,7 +149,7 @@ export function GameTable() {
   const isMyTurn = myPlayer?.seat === currentTurn;
 
   const isWaiting = currentRoom.status === 'waiting';
-  const canCheck = isMyTurn && myPlayer && !myPlayer.folded && !myPlayer.allin && (currentRoom.lastRaise === 0);
+  const canCheck = isMyTurn && myPlayer && !myPlayer.folded && !myPlayer.allin && (currentRoom.currentBet === myPlayer.bet);
   const toCall = myPlayer ?  currentRoom.currentBet - myPlayer.bet : 0;
   const canCall = isMyTurn && toCall > 0  && toCall < myPlayer?.chips && myPlayer && !myPlayer.folded && !myPlayer.allin;
   const canRaise = isMyTurn && myPlayer?.minRaise < myPlayer?.chips && myPlayer && !myPlayer.folded && !myPlayer.allin;
@@ -228,11 +228,11 @@ export function GameTable() {
         )}
 
         {/* Debug: myHand state */}
-        <div className="absolute top-2 left-2 bg-black/80 text-green-400 text-xs font-mono p-2 rounded border border-green-500/30 z-50">
+        {/* <div className="absolute top-2 left-2 bg-black/80 text-green-400 text-xs font-mono p-2 rounded border border-green-500/30 z-50">
           DEBUG myHand: {JSON.stringify(myHand)}<br/>
           DEBUG round: {round}<br/>
           DEBUG roomStatus: {currentRoom.status}
-        </div>
+        </div> */}
 
         {/* Start game button */}
         {isWaiting && myPlayer && (

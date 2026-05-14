@@ -84,6 +84,16 @@ export function setupSocketHandlers(io: Server, roomManager: RoomManager, userSe
       ack({ success: true, room: engine.getPublicState() });
     });
 
+    socket.on('player:hand', (_, ack) => {
+      const engine = roomManager.getRoomByUser(userId);
+      if (!engine) {
+        ack({ success: false, error: '你不在任何房间中' });
+        return;
+      }
+      const cards = engine.getPlayerHand(userId);
+      ack({ success: true, cards: cards ?? [] });
+    });
+
     // ── Game Events ──────────────────────────────────────
 
     socket.on('game:start', (_, ack) => {

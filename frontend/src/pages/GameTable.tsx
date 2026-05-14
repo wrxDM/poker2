@@ -99,17 +99,14 @@ export function GameTable() {
       if (d.roomId === currentRoom?.roomId || !currentRoom) {
         console.log('[DEBUG] setRoom called, myHand BEFORE:', useGameStore.getState().myHand);
         setRoom(d as PublicRoomState);
+        // Actively fetch my hand after room state updates
+        socketService.getMyHand().then(res => {
+          if ((res.cards as unknown[]).length > 0) {
+            setMyHand({ cards: res.cards as HandInfo['cards'] });
+            console.log('[DEBUG] getMyHand set, myHand now:', useGameStore.getState().myHand);
+          }
+        }).catch(() => {});
         console.log('[DEBUG] setRoom done, myHand AFTER:', useGameStore.getState().myHand);
-      }
-    });
-
-    // Listen for hand dealt to self
-    const offHand = socketService.on('hand:dealt', (data: unknown) => {
-      const d = data as { userId: string; cards: unknown[] };
-      console.log('[DEBUG] hand:dealt received', { userId: d.userId, myUserId: user.id, cards: d.cards });
-      if (d.userId === user.id) {
-        setMyHand({ cards: d.cards as HandInfo['cards'] });
-        console.log('[DEBUG] setMyHand called, myHand now:', useGameStore.getState().myHand);
       }
     });
 
@@ -127,7 +124,6 @@ export function GameTable() {
 
     return () => {
       offState();
-      offHand();
       offShowdown();
       offEnd();
     };

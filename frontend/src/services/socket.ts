@@ -83,6 +83,10 @@ class SocketService {
     return this.ack('room:list', {});
   }
 
+  async getMyHand(): Promise<{ cards: unknown[] }> {
+    return this.ack('player:hand', {});
+  }
+
   async startGame(): Promise<void> {
     await this.ack('game:start', {});
   }

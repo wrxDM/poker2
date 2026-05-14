@@ -78,7 +78,7 @@ export class RoomManager {
     if (engine) {
       engine.removePlayer(userId);
       // Clean up empty rooms
-      if (engine.getRoom().players.length === 0) {
+      if (engine.getRoom().players.filter(p => !p.isBot).length === 0) {
         this.rooms.delete(roomId);
       }
     }

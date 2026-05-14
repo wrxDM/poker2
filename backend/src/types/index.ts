@@ -42,6 +42,7 @@ export interface PlayerInRoom {
   hand?: Card[];
   lastAction?: HandAction;
   isBot?: boolean;
+  hasAct?: boolean
 }
 
 export interface RoomState {

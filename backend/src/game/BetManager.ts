@@ -38,6 +38,7 @@ export class BetManager {
     for (const player of players) {
       player.bet = 0;
       player.totalBet = 0;
+      player.hasAct = false;
     }
     this.pot = 0;
     this.currentBet = 0;
@@ -48,10 +49,10 @@ export class BetManager {
   resetRound(players: PlayerInRoom[]): void {
     for (const player of players) {
       player.bet = 0;
+      player.hasAct = false;
     }
     this.currentBet = 0;
     this.lastRaise = 0;
-    this.pot = 0;
   }
 
   getPot(): number {
@@ -257,8 +258,8 @@ export class BetManager {
       }
     }
 
-    // 清空底池
-    this.pot = 0;
+    // // 清空底池
+    // this.pot = 0;
 
     return distribution;
   }

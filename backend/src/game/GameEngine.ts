@@ -358,7 +358,7 @@ export class GameEngine {
     const playerBet = player.bet;
     const toCall = currentBet - playerBet;
     log.debug(`[processAction] ${player.username} 尝试 ${action}，当前下注: ${currentBet}，玩家下注: ${playerBet}，需跟注: ${toCall}`);
-
+    player.hasAct = true;
     switch (action) {
       case 'fold':
         player.folded = true;
@@ -630,13 +630,13 @@ export class GameEngine {
 
   private isRoundComplete(): boolean {
     const activePlayers = this.room.players.filter(p => !p.folded && !p.allin);
-    if (activePlayers.length <= 1) {
-      log.debug(`[isRoundComplete] 活跃玩家 <= 1，返回 true`);
-      return true;
-    }
+    // if (activePlayers.length <= 1) {
+    //   log.debug(`[isRoundComplete] 活跃玩家 <= 1，返回 true`);
+    //   return true;
+    // }
 
     const currentBet = this.betManager.getCurrentBet();
-    const allBetsEqual = activePlayers.every(p => p.bet === currentBet);
+    const allBetsEqual = activePlayers.every(p => p.bet === currentBet && p.hasAct);
     log.debug(`[isRoundComplete] 轮次完成检查结果: ${allBetsEqual}`);
     return allBetsEqual;
   }
@@ -650,18 +650,12 @@ export class GameEngine {
 
     const sortedSeats = activePlayers.map(p => p.seat).sort((a, b) => a - b);
     log.debug(`[getNextActiveSeat] 活跃玩家座位: ${sortedSeats.join(', ')}，从座位 ${from} 找下一个`);
-    const currentIndex = sortedSeats.indexOf(from);
-    if ( currentIndex === -1 ) {
-        return this.getNextActiveSeat(from + 1);
+    for (let i = 0; i < sortedSeats.length; i++) {
+      if (sortedSeats[i] > from) {
+        return sortedSeats[i];
+      }
     }
-    if (currentIndex === sortedSeats.length - 1) {
-      const next = sortedSeats[0];
-      log.debug(`[getNextActiveSeat] 已到末尾或未找到，返回第一个活跃玩家座位: ${next}`);
-      return next;
-    }
-    const next = sortedSeats[currentIndex+1];
-    log.debug(`[getNextActiveSeat] 返回下一个活跃玩家座位: ${next}`);
-    return next;
+    return sortedSeats[0];
   }
 
   private showdown(): void {
@@ -671,10 +665,14 @@ export class GameEngine {
     log.debug(`[showdown] 未弃牌玩家数: ${activePlayers.length}`);
 
     // 找出所有有手牌的玩家并记录他们的下注
-    const results: { playerId: string; hand: Card[]; evaluated: ReturnType<typeof evaluateHand> }[] = [];
+    const results: { playerId: string; hand: Card[]; evaluated: ReturnType<typeof evaluateHand> }[] = activePlayers.map(p => {
+      const hand = evaluateHand(p.hand ?? [], this.room.communityCards);
+      console.log(`[PotDistribution] Evaluated ${p.userId}: hand=${hand.description}, rank=${hand.rank}`);
+      return { playerId: p.userId, hand: p.hand ?? [], evaluated: hand };
+    });
 
     // 使用 BetManager 计算底池分配
-    const distribution = this.betManager.executePotDistribution(activePlayers, this.room.communityCards);
+    const distribution = this.betManager.executePotDistribution( this.room.players, this.room.communityCards);
 
     // 构建返回结果
     const winners: ShowdownResult['winners'] = [];

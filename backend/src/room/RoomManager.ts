@@ -87,8 +87,8 @@ export class RoomManager {
 
   getAllRooms(): PublicRoomState[] {
     return [...this.rooms.values()]
-      .map(e => e.getPublicState())
-      .filter(r => r.status === 'waiting');
+      .map(e => e.getPublicState());
+      // .filter(r => r.status === 'waiting');
   }
 
   destroyRoom(roomId: string): void {

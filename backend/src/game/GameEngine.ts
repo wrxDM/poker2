@@ -695,7 +695,7 @@ export class GameEngine {
     }
 
     this.room.pot = 0;
-    this.room.status = 'finished';
+    this.room.status = 'waiting';
     this.room.round = 'finished';
 
     this.onEvent('game:showdown', {

@@ -34,6 +34,8 @@ export interface PlayerInRoom {
   seat: number;
   chips: number;
   bet: number;
+  totalBet: number;
+  minRaise: number;
   folded: boolean;
   allin: boolean;
   disconnected: boolean;
@@ -57,8 +59,8 @@ export interface RoomState {
   dealerSeat: number;
   smallBlindSeat: number;
   bigBlindSeat: number;
+  currentBet: number;
   lastRaise: number;
-  minRaise: number;
   createdAt: number;
   deck: Card[];
 }

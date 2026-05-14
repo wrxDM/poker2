@@ -43,7 +43,7 @@ export class GameEngine {
   private botActionDelay = 1500; // 机器人延迟决策时间(ms)
   private userService: UserService;
   // 保存每个玩家的总下注（跨所有轮次），用于摊牌时计算底池
-  private totalPlayerBets: Map<string, number> = new Map();
+  // private totalPlayerBets: Map<string, number> = new Map();
 
   constructor(params: {
     roomId: string;
@@ -70,12 +70,12 @@ export class GameEngine {
       dealerSeat: 0,
       smallBlindSeat: 0,
       bigBlindSeat: 0,
+      currentBet: 0,
       lastRaise: 0,
-      minRaise: params.blindBig,
       createdAt: Date.now(),
       deck: [],
     };
-    this.betManager = new BetManager();
+    this.betManager = new BetManager(params.blindBig);
     this.onEvent = params.onEvent;
     log.debug('GameEngine 初始化完成', { roomId: this.room.roomId });
   }
@@ -86,7 +86,7 @@ export class GameEngine {
     log.debug(`addPlayer: ${username}(${userId}) 加入房间，筹码: ${chips}`);
     const seat = this.findEmptySeat();
     const player: PlayerInRoom = {
-      userId, username, seat, chips, bet: 0,
+      userId, username, seat, chips, bet: 0, totalBet: 0, minRaise: 0,
       folded: false, allin: false, disconnected: false,
     };
     this.room.players.push(player);
@@ -112,6 +112,8 @@ export class GameEngine {
       seat,
       chips,
       bet: 0,
+      totalBet: 0,
+      minRaise: 0,
       folded: false,
       allin: false,
       disconnected: false,
@@ -173,10 +175,14 @@ export class GameEngine {
   }
 
   getPublicState(): PublicRoomState {
+    this.room.pot = this.betManager.getPot();
+    this.room.lastRaise = this.betManager.getLastRaise();
+    this.room.currentBet = this.betManager.getCurrentBet();
     const { deck: _, ...rest } = this.room;
     return {
       ...rest,
       players: this.room.players.map(p => {
+        p.minRaise = this.betManager.getMinRaise(p);
         const { hand: __, ...pub } = p;
         return pub;
       }),
@@ -206,7 +212,7 @@ export class GameEngine {
       log.warn(`[startGame] 玩家数不足: ${this.room.players.length} < 2`);
       return { success: false, error: '需要至少2名玩家才能开始' };
     }
-    if (this.room.players.some(p => p.chips <= 0)) {
+    if (this.room.players.some(p => p.chips <= this.room.blindBig)) {
       log.warn('[startGame] 有玩家筹码不足');
       return { success: false, error: '所有玩家需要有筹码才能开始' };
     }
@@ -222,9 +228,9 @@ export class GameEngine {
     log.debug(`[beginHand] 牌堆创建并洗牌完成，剩余牌数: ${this.room.deck.length}`);
     this.room.pot = 0;
     this.room.sidePots = [];
-    this.betManager.resetAll();
+    this.betManager.resetAll(this.room.players);
     // 重置每局的下注记录（用于摊牌时计算底池）
-    this.totalPlayerBets.clear();
+    // this.totalPlayerBets.clear();
 
     // Reset player states
     for (const p of this.room.players) {
@@ -233,7 +239,7 @@ export class GameEngine {
       p.allin = false;
       p.hand = undefined;
       p.lastAction = undefined;
-      this.totalPlayerBets.set(p.userId, 0);
+      // this.totalPlayerBets.set(p.userId, 0);
     }
 
     // Deal hole cards
@@ -261,6 +267,7 @@ export class GameEngine {
     this.room.bigBlindSeat = this.getNextActiveSeat(this.room.smallBlindSeat);
     this.postBlinds();
 
+    // UTG 
     this.room.currentTurn = this.getNextActiveSeat(this.room.bigBlindSeat);
     const firstPlayer = this.room.players.find(p => p.seat === this.room.currentTurn);
     log.debug(`[beginHand] 庄家座位: ${this.room.dealerSeat}，当前玩家: ${firstPlayer?.username}，座位: ${this.room.currentTurn}`);
@@ -292,12 +299,10 @@ export class GameEngine {
     const sbPlayer = players.find(p => p.seat === sbSeat);
     if (sbPlayer) {
       const sbAmount = Math.min(this.room.blindSmall, sbPlayer.chips);
-      sbPlayer.chips -= sbAmount;
-      sbPlayer.bet = sbAmount;
-      this.betManager.addBet(sbPlayer.userId, sbAmount);
+      this.betManager.addBet(sbPlayer, sbAmount);
       // 记录总下注
-      const prevTotal = this.totalPlayerBets.get(sbPlayer.userId) || 0;
-      this.totalPlayerBets.set(sbPlayer.userId, prevTotal + sbAmount);
+      // const prevTotal = this.totalPlayerBets.get(sbPlayer.userId) || 0;
+      // this.totalPlayerBets.set(sbPlayer.userId, prevTotal + sbAmount);
       log.debug(`[postBlinds] 小盲: ${sbPlayer.username} 下注 ${sbAmount}，剩余筹码: ${sbPlayer.chips}`);
     }
 
@@ -306,19 +311,13 @@ export class GameEngine {
     const bbPlayer = players.find(p => p.seat === bbSeat);
     if (bbPlayer) {
       const bbAmount = Math.min(this.room.blindBig, bbPlayer.chips);
-      bbPlayer.chips -= bbAmount;
-      bbPlayer.bet = bbAmount;
-      this.betManager.addBet(bbPlayer.userId, bbAmount);
+      this.betManager.addBet(bbPlayer, bbAmount);
       // 记录总下注
-      const prevTotal = this.totalPlayerBets.get(bbPlayer.userId) || 0;
-      this.totalPlayerBets.set(bbPlayer.userId, prevTotal + bbAmount);
+      // const prevTotal = this.totalPlayerBets.get(bbPlayer.userId) || 0;
+      // this.totalPlayerBets.set(bbPlayer.userId, prevTotal + bbAmount);
       log.debug(`[postBlinds] 大盲: ${bbPlayer.username} 下注 ${bbAmount}，剩余筹码: ${bbPlayer.chips}`);
     }
-
-    this.betManager.setCurrentBet(this.room.blindBig);
-    this.room.lastRaise = this.room.blindBig;
-    this.room.minRaise = this.room.blindBig;
-    this.room.pot = this.betManager.getPot();
+    // TODO check
     log.debug(`[postBlinds] 盲注完成，当前底池: ${this.room.pot}，当前下注: ${this.betManager.getCurrentBet()}`);
   }
 
@@ -366,7 +365,7 @@ export class GameEngine {
 
   private processAction(player: PlayerInRoom, action: HandAction, amount?: number): ActionResult {
     const currentBet = this.betManager.getCurrentBet();
-    const playerBet = this.betManager.getPlayerBet(player.userId);
+    const playerBet = player.bet;
     const toCall = currentBet - playerBet;
     log.debug(`[processAction] ${player.username} 尝试 ${action}，当前下注: ${currentBet}，玩家下注: ${playerBet}，需跟注: ${toCall}`);
 
@@ -388,12 +387,10 @@ export class GameEngine {
 
       case 'call': {
         const callAmount = Math.min(toCall, player.chips);
-        player.chips -= callAmount;
-        player.bet += callAmount;
-        this.betManager.addBet(player.userId, callAmount);
+        this.betManager.addBet(player, callAmount);
         // 记录总下注
-        const prevTotal = this.totalPlayerBets.get(player.userId) || 0;
-        this.totalPlayerBets.set(player.userId, prevTotal + callAmount);
+        // const prevTotal = this.totalPlayerBets.get(player.userId) || 0;
+        // this.totalPlayerBets.set(player.userId, prevTotal + callAmount);
         if (player.chips === 0) {
           player.allin = true;
           log.debug(`[processAction] ${player.username} 跟注后全下！金额: ${callAmount}`);
@@ -410,56 +407,31 @@ export class GameEngine {
           log.warn(`[processAction] 加注未指定金额`);
           return { success: false, error: '加注需要指定金额' };
         }
-        const totalBet = playerBet + amount;
-        if (totalBet <= currentBet) {
-          log.warn(`[processAction] 加注金额不足: 总下注 ${totalBet} <= 当前下注 ${currentBet}`);
-          return { success: false, error: '加注金额必须大于当前下注' };
+        const minRaise = this.betManager.getMinRaise(player);
+        if (amount < minRaise) {
+          log.warn(`[processAction] 加注金额不足: 最小加注： ${minRaise}`);
+          return { success: false, error: '加注金额不足' };
         }
-        const chipsNeeded = totalBet - playerBet;
-        if (chipsNeeded > player.chips) {
-          log.warn(`[processAction] ${player.username} 筹码不足: 需要 ${chipsNeeded}，拥有 ${player.chips}`);
+        if (amount > player.chips) {
+          log.warn(`[processAction] ${player.username} 筹码不足: 需要 ${amount}，拥有 ${player.chips}`);
           return { success: false, error: '筹码不足' };
         }
-        player.chips -= chipsNeeded;
-        player.bet = totalBet;
-        this.betManager.addBet(player.userId, chipsNeeded);
+        this.betManager.addBet(player, amount);
         // 记录总下注
-        const prevTotal = this.totalPlayerBets.get(player.userId) || 0;
-        this.totalPlayerBets.set(player.userId, prevTotal + chipsNeeded);
-        this.betManager.setCurrentBet(totalBet);
-        this.room.lastRaise = totalBet;
-        this.room.minRaise = Math.max(totalBet - currentBet, this.room.blindBig);
-        if (player.chips === 0) {
-          player.allin = true;
-          log.debug(`[processAction] ${player.username} 加注后全下！金额: ${amount}，总下注: ${totalBet}`);
-        } else {
-          log.debug(`[processAction] ${player.username} 加注: ${amount}，总下注: ${totalBet}，剩余筹码: ${player.chips}`);
-        }
+        // const prevTotal = this.totalPlayerBets.get(player.userId) || 0;
+        // this.totalPlayerBets.set(player.userId, prevTotal + chipsNeeded);
         player.lastAction = 'raise';
-        this.room.pot = this.betManager.getPot();
         return { success: true, state: this.getPublicState() };
       }
 
       case 'allin': {
-        const allInAmount = player.chips;
-        const totalBet = playerBet + allInAmount;
-        player.chips = 0;
-        player.bet = totalBet;
+        const allInAmount = player.chips - player.bet;
         player.allin = true;
-        this.betManager.addBet(player.userId, allInAmount);
+        this.betManager.addBet(player, allInAmount);
         // 记录总下注
-        const prevTotal = this.totalPlayerBets.get(player.userId) || 0;
-        this.totalPlayerBets.set(player.userId, prevTotal + allInAmount);
-        if (totalBet > this.betManager.getCurrentBet()) {
-          this.betManager.setCurrentBet(totalBet);
-          this.room.lastRaise = totalBet;
-          this.room.minRaise = Math.max(totalBet - this.betManager.getCurrentBet(), this.room.blindBig);
-          log.debug(`[processAction] ${player.username} 全下触发重新加注！金额: ${allInAmount}，新的当前下注: ${totalBet}`);
-        } else {
-          log.debug(`[processAction] ${player.username} 全下: ${allInAmount}，总下注: ${totalBet}`);
-        }
+        // const prevTotal = this.totalPlayerBets.get(player.userId) || 0;
+        // this.totalPlayerBets.set(player.userId, prevTotal + allInAmount);
         player.lastAction = 'allin';
-        this.room.pot = this.betManager.getPot();
         return { success: true, state: this.getPublicState() };
       }
 
@@ -487,9 +459,6 @@ export class GameEngine {
       log.info(`[advanceGame] 仅剩1名未弃牌玩家 ${unfolderPlayers[0].username}，直接获胜`);
       const winner = unfolderPlayers[0];
       winner.chips += this.room.pot;
-      if (!winner.userId.startsWith('bot_')) {
-        this.userService.setChips(winner.userId, winner.chips);
-      }
       log.info(`[advanceGame] ${winner.username} 获得底池 ${this.room.pot}，当前总筹码: ${winner.chips}`);
       const finalPot = this.room.pot;
       this.room.pot = 0;
@@ -533,7 +502,7 @@ export class GameEngine {
       if (currentIndex < ROUND_ORDER.length - 2) {
         // 下一轮
         this.room.round = ROUND_ORDER[currentIndex + 1];
-        this.betManager.resetRound();
+        this.betManager.resetRound(this.room.players);
         this.room.lastRaise = 0;
         log.info(`[advanceGame] >>>>>>>>> 进入 ${this.room.round.toUpperCase()} <<<<<<<<`);
         
@@ -629,7 +598,7 @@ export class GameEngine {
     }
 
     const currentBet = this.betManager.getCurrentBet();
-    const playerBet = this.betManager.getPlayerBet(botId);
+    const playerBet = player.bet;
     const toCall = currentBet - playerBet;
 
     log.debug(`[executeBotAction] 机器人 ${player.username} 决策参数: 当前下注=${currentBet}, 玩家下注=${playerBet}, 需跟注=${toCall}`);
@@ -642,8 +611,8 @@ export class GameEngine {
       this.room.round,
       toCall,
       currentBet,
-      this.room.minRaise,
-      player.chips + player.bet
+      this.betManager.getMinRaise(player),
+      player.chips
     );
 
     log.info(`[executeBotAction] 机器人 ${player.username} 决策结果: ${decision.action}${decision.amount ? ` (金额: ${decision.amount})` : ''}`);
@@ -687,12 +656,7 @@ export class GameEngine {
     }
 
     const currentBet = this.betManager.getCurrentBet();
-    const allBetsEqual = activePlayers.every(p => {
-      const playerBet = this.betManager.getPlayerBet(p.userId);
-      const equal = playerBet >= currentBet || p.allin;
-      log.debug(`[isRoundComplete] ${p.username}: 下注=${playerBet}, 当前下注=${currentBet}, 已全下=${p.allin}, 本轮完成=${equal}`);
-      return equal;
-    });
+    const allBetsEqual = activePlayers.every(p => p.bet === currentBet);
     log.debug(`[isRoundComplete] 轮次完成检查结果: ${allBetsEqual}`);
     return allBetsEqual;
   }
@@ -707,13 +671,15 @@ export class GameEngine {
     const sortedSeats = activePlayers.map(p => p.seat).sort((a, b) => a - b);
     log.debug(`[getNextActiveSeat] 活跃玩家座位: ${sortedSeats.join(', ')}，从座位 ${from} 找下一个`);
     const currentIndex = sortedSeats.indexOf(from);
-    
-    if (currentIndex === -1 || currentIndex === sortedSeats.length - 1) {
+    if ( currentIndex === -1 ) {
+        return this.getNextActiveSeat(from + 1);
+    }
+    if (currentIndex === sortedSeats.length - 1) {
       const next = sortedSeats[0];
       log.debug(`[getNextActiveSeat] 已到末尾或未找到，返回第一个活跃玩家座位: ${next}`);
       return next;
     }
-    const next = sortedSeats[currentIndex + 1];
+    const next = sortedSeats[currentIndex+1];
     log.debug(`[getNextActiveSeat] 返回下一个活跃玩家座位: ${next}`);
     return next;
   }
@@ -727,27 +693,27 @@ export class GameEngine {
     // 找出所有有手牌的玩家并记录他们的下注
     const results: { playerId: string; hand: Card[]; evaluated: ReturnType<typeof evaluateHand> }[] = [];
 
-    for (const p of activePlayers) {
-      if (p.hand) {
-        const evaluated = evaluateHand(p.hand, this.room.communityCards);
-        results.push({ playerId: p.userId, hand: p.hand, evaluated });
-        log.debug(`[showdown] ${p.username} 手牌: ${p.hand.map(c => `${c.suit}${c.rank}`).join(' ')} -> ${evaluated.description}`);
-      }
-    }
+    // for (const p of activePlayers) {
+    //   if (p.hand) {
+    //     const evaluated = evaluateHand(p.hand, this.room.communityCards);
+    //     results.push({ playerId: p.userId, hand: p.hand, evaluated });
+    //     log.debug(`[showdown] ${p.username} 手牌: ${p.hand.map(c => `${c.suit}${c.rank}`).join(' ')} -> ${evaluated.description}`);
+    //   }
+    // }
 
-    if (results.length === 0) {
-      log.warn('[showdown] 没有玩家有手牌，无法结算');
-      this.room.status = 'finished';
-      this.room.round = 'finished';
-      this.emitState();
-      return;
-    }
+    // if (results.length === 0) {
+    //   log.warn('[showdown] 没有玩家有手牌，无法结算');
+    //   this.room.status = 'finished';
+    //   this.room.round = 'finished';
+    //   this.emitState();
+    //   return;
+    // }
 
     // 设置每个玩家的下注信息到 BetManager（用于底池计算）
-    for (const p of activePlayers) {
-      const totalBet = this.totalPlayerBets.get(p.userId) || p.bet;
-      this.betManager.addBet(p.userId, totalBet - this.betManager.getPlayerBet(p.userId));
-    }
+    // for (const p of activePlayers) {
+    //   const totalBet = this.totalPlayerBets.get(p.userId) || p.bet;
+    //   this.betManager.addBet(p.userId, totalBet - this.betManager.getPlayerBet(p.userId));
+    // }
 
     // 使用 BetManager 计算底池分配
     const distribution = this.betManager.executePotDistribution(activePlayers, this.room.communityCards);
@@ -800,20 +766,20 @@ export class GameEngine {
       return { success: false, error: '当前游戏未结束' };
     }
 
+    // 移除没有筹码的玩家
+    for (const p of this.room.players) {
+      if (p.chips < this.room.blindBig) {
+        log.debug(`[startNextHand] 移除没有足够筹码的玩家: ${p.username}`);
+        this.removePlayer(p.userId);
+      }
+    }
+
     // 检查是否还有足够的玩家
     const activePlayers = this.room.players.filter(p => p.chips > 0);
     log.debug(`[startNextHand] 有筹码的玩家数: ${activePlayers.length}`);
     if (activePlayers.length < 2) {
       log.warn(`[startNextHand] 没有足够的玩家继续游戏: ${activePlayers.length} < 2`);
       return { success: false, error: '没有足够的玩家继续游戏' };
-    }
-
-    // 移除没有筹码的玩家
-    for (const p of this.room.players) {
-      if (p.chips <= 0) {
-        log.debug(`[startNextHand] 移除没有筹码的玩家: ${p.username}`);
-        this.removePlayer(p.userId);
-      }
     }
 
     // 移动庄家
@@ -825,10 +791,11 @@ export class GameEngine {
     // 重置游戏状态
     this.room.round = 'waiting';
     this.room.communityCards = [];
-    this.betManager.resetAll();
+    this.betManager.resetAll(this.room.players);
 
     for (const p of this.room.players) {
       p.bet = 0;
+      p.totalBet = 0;
       p.folded = false;
       p.allin = false;
       p.hand = undefined;

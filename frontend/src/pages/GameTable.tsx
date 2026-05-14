@@ -27,11 +27,15 @@ const SEAT_POSITIONS = [
 const getUniformPosition = (playerSeat: number, totalPlayers: number) => {
   // 计算旋转偏移量，使 mySeat 位于 SEAT_POSITIONS[0]
   const gap = 10 / totalPlayers;
-  console.log('[DEBUG] totalPlayers:', totalPlayers);
-  console.log('[DEBUG] playerSeat:', playerSeat);
-  console.log('[DEBUG] gap:', gap);
-  console.log('[DEBUG] SEAT_POSITIONS[Math.floor(playerSeat * gap)]:', SEAT_POSITIONS[Math.floor(playerSeat * gap)]);
-  return SEAT_POSITIONS[Math.floor(playerSeat * gap)];
+  let index = Math.floor(playerSeat * gap);
+  if (playerSeat > totalPlayers / 2) {
+    index = 10 - Math.floor((totalPlayers - playerSeat) * gap);
+  }
+  // console.log('[DEBUG] totalPlayers:', totalPlayers);
+  // console.log('[DEBUG] playerSeat:', playerSeat);
+  // console.log('[DEBUG] gap:', gap);
+  // console.log('[DEBUG] SEAT_POSITIONS[Math.floor(playerSeat * gap)]:', SEAT_POSITIONS[Math.floor(playerSeat * gap)]);
+  return SEAT_POSITIONS[index];
 };
 
 export function GameTable() {
@@ -146,8 +150,9 @@ export function GameTable() {
 
   const isWaiting = currentRoom.status === 'waiting';
   const canCheck = isMyTurn && myPlayer && !myPlayer.folded && !myPlayer.allin && (currentRoom.lastRaise === 0);
-  const toCall = currentRoom.lastRaise > 0 && myPlayer ? currentRoom.lastRaise : 0;
-  const canCall = isMyTurn && toCall > 0 && myPlayer && !myPlayer.folded && !myPlayer.allin;
+  const toCall = myPlayer ?  currentRoom.currentBet - myPlayer.bet : 0;
+  const canCall = isMyTurn && toCall > 0  && toCall < myPlayer?.chips && myPlayer && !myPlayer.folded && !myPlayer.allin;
+  const canRaise = isMyTurn && myPlayer?.minRaise < myPlayer?.chips && myPlayer && !myPlayer.folded && !myPlayer.allin;
 
   // 动态计算均匀分布的位置
   const getPosition = (playerSeat: number) => {
@@ -286,8 +291,9 @@ export function GameTable() {
           canCheck={canCheck}
           canCall={!!canCall}
           callAmount={toCall}
-          minRaise={Math.max(currentRoom.lastRaise * 2, blindBig)}
-          maxRaise={(myPlayer?.chips ?? 0) + (myPlayer?.bet ?? 0)}
+          canRaise={!!canRaise}
+          minRaise={myPlayer?.minRaise ?? 0}
+          maxRaise={myPlayer?.chips ?? 0}
           chips={myPlayer?.chips ?? 0}
           isMyTurn={!!isMyTurn}
           onAction={handleAction}

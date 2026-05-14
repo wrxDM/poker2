@@ -5,6 +5,7 @@ interface ActionBarProps {
   canCheck: boolean;
   canCall: boolean;
   callAmount: number;
+  canRaise: boolean;
   minRaise: number;
   maxRaise: number;
   chips: number;
@@ -16,6 +17,7 @@ export function ActionBar({
   canCheck,
   canCall,
   callAmount,
+  canRaise,
   minRaise,
   maxRaise,
   chips,
@@ -46,13 +48,14 @@ export function ActionBar({
           <input
             type="range"
             min={minRaise}
+            step={10}
             max={Math.min(chips, maxRaise)}
             value={raiseValue}
             onChange={(e) => setRaiseValue(Number(e.target.value))}
             className="w-full accent-yellow-400"
           />
           <div className="flex gap-2">
-            {[minRaise, Math.floor((minRaise + maxRaise) / 2), maxRaise].map((val) => (
+            {[minRaise, Math.floor((minRaise + maxRaise) / 4), Math.floor((minRaise + maxRaise) / 2), maxRaise].map((val) => (
               <button
                 key={val}
                 onClick={() => setRaiseValue(Math.min(val, chips))}
@@ -113,7 +116,8 @@ export function ActionBar({
         ) : null}
 
         {/* Raise (only when can check/call is available, or when no bet yet) */}
-        <button
+        {canRaise ? (
+          <button
           onClick={() => {
             setRaiseValue(minRaise);
             setShowRaise(true);
@@ -122,6 +126,7 @@ export function ActionBar({
         >
           加注
         </button>
+        ) : null}
 
         {/* All-in */}
         {chips > 0 && (

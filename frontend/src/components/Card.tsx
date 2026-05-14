@@ -64,10 +64,10 @@ export function Card({ card, faceDown = false, small = false, className = '', de
       </div>
 
       {/* Bottom right (inverted) */}
-      <div className={`flex flex-col items-end ${color} transform rotate-180`}>
+      {/* <div className={`flex flex-col items-end ${color} transform rotate-180`}>
         <span className={`font-bold leading-none ${small ? 'text-xs' : 'text-sm sm:text-base'}`}>{rankDisplay}</span>
         <span className={`leading-none ${small ? 'text-xs' : 'text-sm sm:text-lg'}`}>{symbol}</span>
-      </div>
+      </div> */}
     </div>
   );
 }

@@ -25,24 +25,33 @@ interface EvaluatedPlayer {
 
 export class BetManager {
   private pot: number = 0;
-  private sidePots: number[] = [];
-  private playerBets: Map<string, number> = new Map();
   private currentBet: number = 0;
   private lastRaise: number = 0;
+  blindBig: number = 0;
+  
+  constructor( blindBig: number ) {
+    this.blindBig = blindBig;
+  }
 
   /** 清空所有状态（含底池），用于整局重置 */
-  resetAll(): void {
+  resetAll(players: PlayerInRoom[]): void {
+    for (const player of players) {
+      player.bet = 0;
+      player.totalBet = 0;
+    }
     this.pot = 0;
-    this.sidePots = [];
-    this.playerBets.clear();
     this.currentBet = 0;
     this.lastRaise = 0;
   }
 
   /** 只清本轮下注状态，不清底池，用于进入下一轮 */
-  resetRound(): void {
+  resetRound(players: PlayerInRoom[]): void {
+    for (const player of players) {
+      player.bet = 0;
+    }
     this.currentBet = 0;
     this.lastRaise = 0;
+    this.pot = 0;
   }
 
   getPot(): number {
@@ -57,8 +66,9 @@ export class BetManager {
     return this.lastRaise;
   }
 
-  getMinRaise(): number {
-    return this.lastRaise > 0 ? this.currentBet + this.lastRaise : this.currentBet * 2;
+  getMinRaise(player: PlayerInRoom): number {
+    const minRaise = Math.max(this.blindBig, this.lastRaise);
+    return this.currentBet + minRaise - player.bet;
   }
 
   setCurrentBet(amount: number): void {
@@ -69,33 +79,18 @@ export class BetManager {
     this.lastRaise = amount;
   }
 
-  addBet(playerId: string, amount: number): void {
-    const current = this.playerBets.get(playerId) || 0;
-    this.playerBets.set(playerId, current + amount);
+  addBet(player: PlayerInRoom, amount: number): void {
+    console.log(`[BetManager] addBet: player=${player.username}(${player.userId}), amount=${amount}, before: bet=${player.bet}, chips=${player.chips}, currentBet=${this.currentBet}, pot=${this.pot}`);
+    player.bet += amount;
+    player.totalBet += amount;
+    player.chips -= amount;
+    if (player.bet > this.currentBet) {
+      this.lastRaise = player.bet - this.currentBet;
+      this.currentBet = player.bet;
+      console.log(`[BetManager]  new raise detected: lastRaise=${this.lastRaise}, currentBet=${this.currentBet}`);
+    }
     this.pot += amount;
-  }
-
-  getPlayerBet(playerId: string): number {
-    return this.playerBets.get(playerId) || 0;
-  }
-
-  getPlayerContribution(playerId: string, totalChips: number): number {
-    const bet = this.playerBets.get(playerId) || 0;
-    return Math.min(bet, totalChips);
-  }
-
-  collectBets(): void {
-    this.pot += [...this.playerBets.values()].reduce((a, b) => a + b, 0);
-    this.playerBets.clear();
-    this.currentBet = 0;
-    this.lastRaise = 0;
-  }
-
-  distributePots(winners: { playerId: string; amount: number }[]): void {
-  }
-
-  getAllInPlayers(players: PlayerInRoom[]): PlayerInRoom[] {
-    return players.filter(p => p.allin && !p.folded);
+    console.log(`[BetManager]  after: bet=${player.bet}, chips=${player.chips}, pot=${this.pot}`);
   }
 
   /**
@@ -120,7 +115,6 @@ export class BetManager {
     console.log('[PotDistribution] ====== START ======');
     console.log('[PotDistribution] Players:', players.map(p => ({ id: p.userId, chips: p.chips, hand: p.hand, folded: p.folded })));
     console.log('[PotDistribution] Community cards:', communityCards);
-    console.log('[PotDistribution] playerBets:', Object.fromEntries(this.playerBets));
 
     // Step 1: Filter non-folded players and sort by hand strength descending
     const activePlayers = players.filter(p => !p.folded);
@@ -154,7 +148,7 @@ export class BetManager {
     console.log('[PotDistribution] Strength groups:', strengthGroups.map(g => ({ players: g.map(p => p.playerId), rank: g[0].evaluated.rank, desc: g[0].evaluated.description })));
 
     // Step 2: Calculate total distributable pot chips
-    const totalChips = [...this.playerBets.values()].reduce((a, b) => a + b, 0);
+    const totalChips = this.pot;
     console.log('[PotDistribution] Total chips in playerBets:', totalChips);
     if (totalChips <= 0) {
       console.log('[PotDistribution] No chips to distribute');
@@ -164,7 +158,7 @@ export class BetManager {
     // Remaining chips for each player (mutable copy)
     const remaining = new Map<string, number>();
     for (const p of players) {
-      remaining.set(p.userId, this.playerBets.get(p.userId) || 0);
+      remaining.set(p.userId, p.totalBet || 0);
     }
     console.log('[PotDistribution] Remaining chips:', Object.fromEntries(remaining));
 

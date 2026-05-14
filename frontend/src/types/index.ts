@@ -21,6 +21,7 @@ export interface PlayerPublic {
   disconnected: boolean;
   lastAction?: HandAction;
   isBot?: boolean;
+  minRaise: number;
 }
 
 export interface PublicRoomState {
@@ -39,7 +40,7 @@ export interface PublicRoomState {
   smallBlindSeat: number;
   bigBlindSeat: number;
   lastRaise: number;
-  minRaise: number;
+  currentBet: number;
 }
 
 export interface User {

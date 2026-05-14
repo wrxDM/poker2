@@ -158,7 +158,7 @@ export class BotPlayer {
     communityCards: Card[],
     round: string,
     toCall: number,
-    currentBet: number,
+    bet: number,
     minRaise: number,
     maxChips: number
   ): BotDecision {

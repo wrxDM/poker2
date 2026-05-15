@@ -22,6 +22,8 @@ export interface PlayerPublic {
   lastAction?: HandAction;
   isBot?: boolean;
   minRaise: number;
+  /** Voice chat — true means this player is muted (others won't hear them) */
+  muted?: boolean;
 }
 
 export interface PublicRoomState {

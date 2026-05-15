@@ -4,6 +4,15 @@ import type { PublicRoomState, HandAction } from '../types';
 class SocketService {
   private socket: Socket | null = null;
   private listeners: Map<string, Set<(...args: unknown[]) => void>> = new Map();
+  private _roomId: string | null = null;
+
+  get roomId(): string | null {
+    return this._roomId;
+  }
+
+  setRoomId(roomId: string | null): void {
+    this._roomId = roomId;
+  }
 
   connect(token: string): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -30,6 +39,9 @@ class SocketService {
         'room:state', 'room:player_joined', 'room:player_left',
         'game:started', 'game:showdown', 'game:ended',
         'hand:dealt', 'player:actioned', 'round:started',
+        'voice:user_joined', 'voice:user_left',
+        'voice:offer', 'voice:answer', 'voice:ice_candidate',
+        'voice:mute_changed', 'voice:peers',
       ];
 
       for (const event of events) {
@@ -60,14 +72,18 @@ class SocketService {
   // ── Room Actions ──────────────────────────────────────
 
   async createRoom(params: { name: string; blindSmall?: number; blindBig?: number }): Promise<PublicRoomState> {
-    return this.ack('room:create', params);
+    const room = await this.ack<PublicRoomState>('room:create', params);
+    this._roomId = room.roomId;
+    return room;
   }
 
   async joinRoom(roomId: string, chips?: number): Promise<PublicRoomState> {
+    this._roomId = roomId;
     return this.ack('room:join', { roomId, chips });
   }
 
   async leaveRoom(): Promise<void> {
+    this._roomId = null;
     await this.ack('room:leave', {});
   }
 
@@ -107,6 +123,33 @@ class SocketService {
 
   async removeBot(botId: string): Promise<void> {
     await this.ack('bot:remove', { botId });
+  }
+
+  // ── Voice Chat Signaling ────────────────────────────────
+
+  /** Broadcast WebRTC offer to a specific peer */
+  emitVoiceOffer(toUserId: string, offer: RTCSessionDescriptionInit): void {
+    this.socket?.emit('voice:offer', { toUserId, offer });
+  }
+
+  /** Send WebRTC answer back to the caller */
+  emitVoiceAnswer(toUserId: string, answer: RTCSessionDescriptionInit): void {
+    this.socket?.emit('voice:answer', { toUserId, answer });
+  }
+
+  /** Send ICE candidate to a specific peer */
+  emitVoiceIceCandidate(toUserId: string, candidate: RTCIceCandidateInit): void {
+    this.socket?.emit('voice:ice_candidate', { toUserId, candidate });
+  }
+
+  /** Broadcast mute state change to all players in the room */
+  emitMuteChanged(muted: boolean): void {
+    this.socket?.emit('voice:mute_changed', { muted });
+  }
+
+  /** Request to re-join voice (re-initiate peer connections) */
+  async requestVoicePeers(): Promise<void> {
+    return this.ack('voice:request_peers', {});
   }
 
   private ack<T>(event: string, data: unknown): Promise<T> {

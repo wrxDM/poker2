@@ -8,6 +8,9 @@ interface AuthenticatedSocket extends Socket {
   username?: string;
 }
 
+/** Map of userId -> their current socket ID, used for precise WebRTC signaling routing */
+const userSocketMap = new Map<string, string>();
+
 export function setupSocketHandlers(io: Server, roomManager: RoomManager, userService: UserService): void {
   // Auth middleware
   io.use((socket: AuthenticatedSocket, next) => {
@@ -27,6 +30,10 @@ export function setupSocketHandlers(io: Server, roomManager: RoomManager, userSe
   io.on('connection', (socket: AuthenticatedSocket) => {
     const userId = socket.userId!;
     const username = socket.username!;
+
+    // Register socket ID for this user so we can route WebRTC signals precisely
+    userSocketMap.set(userId, socket.id);
+    console.log(`[Socket] ${username} (${userId}) connected, socketId=${socket.id}`);
 
     // ── Room Events ──────────────────────────────────────
 
@@ -185,9 +192,120 @@ export function setupSocketHandlers(io: Server, roomManager: RoomManager, userSe
     ack({ success: true, user });
   });
 
+  // ── Voice Chat Signaling ────────────────────────────────
+
+  /**
+   * Relay a WebRTC offer to a specific peer.
+   * Payload: { toUserId: string, offer: RTCSessionDescriptionInit }
+   */
+  socket.on('voice:offer', (data: { toUserId: string; offer: unknown }, ack) => {
+    const { toUserId, offer } = data;
+    const room = roomManager.getRoomByUser(userId);
+    if (!room) return;
+
+    // Validate that the target peer is in the same room
+    const targetPlayer = room.getRoom().players.find((p) => p.userId === toUserId);
+    if (!targetPlayer) {
+      console.warn(`[VoiceChat] voice:offer — target ${toUserId} not in room ${room.getRoom().roomId}`);
+      return;
+    }
+
+    const targetSocketId = userSocketMap.get(toUserId);
+    if (!targetSocketId) {
+      console.warn(`[VoiceChat] voice:offer — target ${toUserId} has no active socket`);
+      return;
+    }
+
+    io.to(targetSocketId).emit('voice:offer', { fromUserId: userId, offer });
+  });
+
+  /**
+   * Relay a WebRTC answer to the caller.
+   * Payload: { toUserId: string, answer: RTCSessionDescriptionInit }
+   */
+  socket.on('voice:answer', (data: { toUserId: string; answer: unknown }, ack) => {
+    const { toUserId, answer } = data;
+    const room = roomManager.getRoomByUser(userId);
+    if (!room) {
+      console.warn(`[VoiceChat] voice:answer — sender ${userId} not in any room`);
+      return;
+    }
+
+    // Validate that the target peer is in the same room
+    const targetPlayer = room.getRoom().players.find((p) => p.userId === toUserId);
+    if (!targetPlayer) {
+      console.warn(`[VoiceChat] voice:answer — target ${toUserId} not in room ${room.getRoom().roomId}`);
+      return;
+    }
+
+    const targetSocketId = userSocketMap.get(toUserId);
+    if (!targetSocketId) {
+      console.warn(`[VoiceChat] voice:answer — target ${toUserId} has no active socket`);
+      return;
+    }
+
+    io.to(targetSocketId).emit('voice:answer', { fromUserId: userId, answer });
+  });
+
+  /**
+   * Relay an ICE candidate to a specific peer.
+   * Payload: { toUserId: string, candidate: unknown }
+   */
+  socket.on('voice:ice_candidate', (data: { toUserId: string; candidate: unknown }, ack) => {
+    const { toUserId, candidate } = data;
+    const room = roomManager.getRoomByUser(userId);
+    if (!room) {
+      console.warn(`[VoiceChat] voice:ice_candidate — sender ${userId} not in any room`);
+      return;
+    }
+
+    // Validate that the target peer is in the same room
+    const targetPlayer = room.getRoom().players.find((p) => p.userId === toUserId);
+    if (!targetPlayer) {
+      console.warn(`[VoiceChat] voice:ice_candidate — target ${toUserId} not in room ${room.getRoom().roomId}`);
+      return;
+    }
+
+    const targetSocketId = userSocketMap.get(toUserId);
+    if (!targetSocketId) {
+      console.warn(`[VoiceChat] voice:ice_candidate — target ${toUserId} has no active socket`);
+      return;
+    }
+
+    io.to(targetSocketId).emit('voice:ice_candidate', { fromUserId: userId, candidate });
+  });
+
+  /**
+   * Broadcast mute state change to all other players in the room.
+   * Payload: { muted: boolean }
+   */
+  socket.on('voice:mute_changed', (data: { muted: boolean }) => {
+    const { muted } = data;
+    const room = roomManager.getRoomByUser(userId);
+    if (!room) return;
+    socket.to(room.getRoom().roomId).emit('voice:mute_changed', { userId, muted });
+  });
+
+  /**
+   * Respond with the list of other user IDs in the same room (for re-establishing peers).
+   */
+  socket.on('voice:request_peers', (_, ack) => {
+    const room = roomManager.getRoomByUser(userId);
+    if (!room) {
+      ack({ success: false, error: 'Not in a room' });
+      return;
+    }
+    const peers = room.getRoom().players
+      .filter((p) => p.userId !== userId)
+      .map((p) => ({ userId: p.userId, username: p.username }));
+    ack({ success: true, peers });
+  });
+
   // ── Disconnect ───────────────────────────────────────
 
   socket.on('disconnect', () => {
+    console.log(`[Socket] ${username} (${userId}) disconnected, socketId=${socket.id}`);
+    userSocketMap.delete(userId);
     leaveCurrentRoom(socket, roomManager, io);
   });
   });

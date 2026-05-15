@@ -22,6 +22,14 @@ interface GameStore {
   // UI state
   raiseAmount: number;
   setRaiseAmount: (amount: number) => void;
+
+  // Voice chat
+  /** True when this player has muted their microphone (others won't hear them) */
+  isMuted: boolean;
+  setMuted: (muted: boolean) => void;
+  /** True when this player has silenced incoming audio (they won't hear others) */
+  isSilenced: boolean;
+  setSilenced: (silenced: boolean) => void;
 }
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -42,4 +50,10 @@ export const useGameStore = create<GameStore>((set) => ({
 
   raiseAmount: 0,
   setRaiseAmount: (amount) => set({ raiseAmount: amount }),
+
+  isMuted: false,
+  setMuted: (muted) => set({ isMuted: muted }),
+
+  isSilenced: false,
+  setSilenced: (silenced) => set({ isSilenced: silenced }),
 }));

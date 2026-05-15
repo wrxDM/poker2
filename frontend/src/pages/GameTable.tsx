@@ -8,6 +8,8 @@ import { PotDisplay } from '../components/PotDisplay';
 import { ActionBar } from '../components/ActionBar';
 import { ShowdownModal } from '../components/ShowdownModal';
 import { Card } from '../components/Card';
+import { VoiceControls } from '../components/VoiceControls';
+import { useVoiceChat } from '../hooks/useVoiceChat';
 import type { PublicRoomState, HandInfo, HandAction, ShowdownInfo } from '../types';
 
 const SEAT_POSITIONS = [
@@ -43,6 +45,11 @@ export function GameTable() {
   const { user, token, currentRoom, myHand, showdown, setRoom, setMyHand, setShowdown, clearRoom } = useGameStore();
   const [timerSeconds, setTimerSeconds] = useState(30);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Voice Chat ─────────────────────────────────────────
+  const { toggleMute, toggleDeafen, speakingUsers, error: voiceError } = useVoiceChat(
+    user?.id ?? '',
+  );
 
   // ── Turn Timer ───────────────────────────────────────────
   const activeRounds = ['preflop', 'flop', 'turn', 'river'] as const;
@@ -254,6 +261,7 @@ export function GameTable() {
             isSmallBlind={player.seat === currentRoom.smallBlindSeat}
             isBigBlind={player.seat === currentRoom.bigBlindSeat}
             isMySeat={player.userId === user?.id}
+            isSpeaking={speakingUsers.has(player.userId)}
             position={getPosition(player.seat)}
           />
         ))}
@@ -340,6 +348,14 @@ export function GameTable() {
           timerSeconds={timerSeconds}
         />
       )}
+
+      {/* Voice Chat Controls */}
+      <VoiceControls
+        speakingUsers={speakingUsers}
+        error={voiceError}
+        onToggleMute={toggleMute}
+        onToggleDeafen={toggleDeafen}
+      />
 
       {/* Showdown Modal */}
       {showdown && (

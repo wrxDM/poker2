@@ -26,8 +26,9 @@ const SEAT_POSITIONS = [
 ];
 
 // 根据 SEAT_POSITIONS 动态计算玩家位置：mySeat 永远在 SEAT_POSITIONS[0]（底部中心）
-const getUniformPosition = (playerSeat: number, totalPlayers: number) => {
+const getUniformPosition = (playerSeat: number, mySeat: number, totalPlayers: number) => {
   // 计算旋转偏移量，使 mySeat 位于 SEAT_POSITIONS[0]
+  playerSeat = (playerSeat - mySeat + totalPlayers) % totalPlayers;
   const gap = 10 / totalPlayers;
   let index = Math.floor(playerSeat * gap);
   if (playerSeat > totalPlayers / 2) {
@@ -47,9 +48,11 @@ export function GameTable() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Voice Chat ─────────────────────────────────────────
-  const { toggleMute, toggleDeafen, speakingUsers, error: voiceError } = useVoiceChat(
+  const { toggleMute, toggleDeafen, speakingUsers, remoteStreams, error: voiceError } = useVoiceChat(
     user?.id ?? '',
   );
+
+  console.log('[DEBUG] remoteStreams:', remoteStreams.size);
 
   // ── Turn Timer ───────────────────────────────────────────
   const activeRounds = ['preflop', 'flop', 'turn', 'river'] as const;
@@ -204,7 +207,7 @@ export function GameTable() {
 
   // 动态计算均匀分布的位置
   const getPosition = (playerSeat: number) => {
-    return getUniformPosition(playerSeat, players.length);
+    return getUniformPosition(playerSeat, myPlayer?.seat ?? 0, players.length);
   };
 
   return (

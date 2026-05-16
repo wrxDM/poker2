@@ -29,7 +29,7 @@ export function VoiceControls({ speakingUsers, error, onToggleMute, onToggleDeaf
       <button
         onClick={onToggleDeafen}
         className={`
-          relative flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full
+          relative flex items-center justify-center w-12 h-12 rounded-full
           shadow-xl transition-all duration-200 active:scale-90
           ${isSilenced
             ? 'bg-red-900 hover:bg-red-800 border-2 border-red-500'
@@ -63,11 +63,11 @@ export function VoiceControls({ speakingUsers, error, onToggleMute, onToggleDeaf
       <button
         onClick={onToggleMute}
         className={`
-          relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full
+          relative flex items-center justify-center w-12 h-12 rounded-full
           shadow-xl transition-all duration-200 active:scale-90
           ${isMuted
-            ? 'bg-gray-800 hover:bg-gray-700 border-2 border-gray-500'
-            : 'bg-green-700 hover:bg-green-600 border-2 border-green-400'
+            ? 'bg-red-900 hover:bg-red-800 border-2 border-red-500'
+            : 'bg-gray-700 hover:bg-gray-600 border-2 border-gray-500'
           }
         `}
         title={isMuted ? '解除闭麦' : '闭麦（他人听不见你）'}
@@ -106,7 +106,7 @@ export function VoiceControls({ speakingUsers, error, onToggleMute, onToggleDeaf
       <button
         onClick={onResetVoice}
         className="
-          flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full
+          flex items-center justify-center w-12 h-12 rounded-full
           shadow-xl transition-all duration-200 active:scale-90
           bg-blue-900 hover:bg-blue-800 border-2 border-blue-600
         "
@@ -114,7 +114,7 @@ export function VoiceControls({ speakingUsers, error, onToggleMute, onToggleDeaf
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
           strokeLinecap="round" strokeLinejoin="round"
-          className="w-4 h-4 text-blue-300">
+          className="w-5 h-5 text-blue-300">
           <polyline points="23 4 23 10 17 10" />
           <polyline points="1 20 1 14 7 14" />
           <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />

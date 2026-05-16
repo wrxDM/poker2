@@ -48,11 +48,9 @@ export function GameTable() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Voice Chat ─────────────────────────────────────────
-  const { toggleMute, toggleDeafen, speakingUsers, remoteStreams, error: voiceError, resetVoice } = useVoiceChat(
+  const { toggleMute, toggleDeafen, speakingUsers, error: voiceError, resetVoice } = useVoiceChat(
     user?.id ?? '',
   );
-
-  console.log('[DEBUG] remoteStreams:', remoteStreams.size);
 
   // ── Turn Timer ───────────────────────────────────────────
   const activeRounds = ['preflop', 'flop', 'turn', 'river'] as const;

@@ -12,8 +12,6 @@ import { socketService } from './socket';
 
 export interface VoiceChatEvents {
   onSpeakingUser: (userId: string, speaking: boolean) => void;
-  onRemoteStream: (userId: string, stream: MediaStream) => void;
-  onRemoteStreamRemoved: (userId: string) => void;
   onError: (err: Error) => void;
 }
 
@@ -198,7 +196,6 @@ export class VoiceChatManager {
     this.speakingTimers.delete(userId);
     this.remoteAudioEls.get(userId)?.pause();
     this.remoteAudioEls.delete(userId);
-    this.events.onRemoteStreamRemoved(userId);
   }
 
   /**
@@ -216,7 +213,6 @@ export class VoiceChatManager {
     this.remoteAudioEls.clear();
     this.speakingTimers.forEach((t) => clearTimeout(t));
     this.speakingTimers.clear();
-    this.events.onRemoteStreamRemoved('__all__');
 
     try {
       const peers = await socketService.requestVoicePeers();
@@ -246,7 +242,6 @@ export class VoiceChatManager {
     pc.ontrack = (event: RTCTrackEvent) => {
       const [remoteStream] = event.streams;
       if (remoteStream) {
-        this.events.onRemoteStream(peerId, remoteStream);
         console.log(`[VoiceChat] ontrack from ${peerId} — ${remoteStream.getAudioTracks().length} audio tracks`);
         // Attach remote stream to an audio element so the user can hear the peer
         const audioEl = new Audio();

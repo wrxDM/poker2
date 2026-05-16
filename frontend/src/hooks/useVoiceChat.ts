@@ -41,7 +41,6 @@ export function useVoiceChat(
 ): UseVoiceChatReturn {
   const { isMuted, setMuted: setStoreMuted, isSilenced, setSilenced: setStoreSilenced } = useGameStore();
   const [speakingUsers, setSpeakingUsers] = useState<Set<string>>(new Set());
-  const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
 
@@ -60,22 +59,6 @@ export function useVoiceChat(
           const next = new Set(prev);
           if (speaking) next.add(userId);
           else next.delete(userId);
-          return next;
-        });
-      },
-      onRemoteStream: (userId, stream) => {
-        console.log(`[useVoiceChat] onRemoteStream: ${userId}, tracks=${stream.getAudioTracks().length}`);
-        setRemoteStreams((prev) => {
-          const next = new Map(prev);
-          next.set(userId, stream);
-          return next;
-        });
-      },
-      onRemoteStreamRemoved: (userId) => {
-        console.log(`[useVoiceChat] onRemoteStreamRemoved: ${userId}`);
-        setRemoteStreams((prev) => {
-          const next = new Map(prev);
-          next.delete(userId);
           return next;
         });
         setSpeakingUsers((prev) => {
@@ -236,7 +219,6 @@ export function useVoiceChat(
     toggleDeafen,
     setSilenced: setSilencedFn,
     speakingUsers,
-    remoteStreams,
     error,
     isReady,
     resetVoice,

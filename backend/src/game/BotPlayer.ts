@@ -25,18 +25,16 @@ const DEFAULT_BOT_NAMES = [
 export class BotPlayer {
   public readonly botId: string;
   public readonly username: string;
-  public chips: number;
   public hand: Card[] | undefined;
   public config: BotConfig;
   
   // 跟踪历史决策
   private decisionHistory: { action: string; handStrength: number }[] = [];
 
-  constructor(botId: string, chips: number, config?: Partial<BotConfig>) {
+  constructor(botId: string, config?: Partial<BotConfig>) {
     this.botId = botId;
     this.username = DEFAULT_BOT_NAMES[Math.floor(Math.random() * DEFAULT_BOT_NAMES.length)] + 
                     Math.floor(Math.random() * 100);
-    this.chips = chips;
     this.config = {
       playStyle: 'loose',
       raiseFrequency: 0.4,
@@ -199,7 +197,7 @@ export class BotPlayer {
       if (canCheck) {
         return Math.random() < 0.4 ? { action: 'raise', amount: minRaise } : { action: 'check' };
       }
-      if (strength >= 0.75 && this.chips >= minRaise) {
+      if (strength >= 0.75 && maxChips >= minRaise) {
         return { action: 'raise', amount: this.getRaiseAmount(minRaise, maxChips) };
       }
       return { action: 'call' };
@@ -222,7 +220,7 @@ export class BotPlayer {
       if (canCheck) {
         return Math.random() < 0.5 ? { action: 'raise', amount: minRaise } : { action: 'check' };
       }
-      if (strength >= 0.8 && this.chips >= minRaise) {
+      if (strength >= 0.8 && maxChips >= minRaise) {
         return { action: 'raise', amount: this.getRaiseAmount(minRaise, maxChips) };
       }
       return { action: 'call' };
@@ -254,7 +252,7 @@ export class BotPlayer {
         return Math.random() < 0.7 ? { action: 'raise', amount: minRaise } : { action: 'check' };
       }
       // 经常加注
-      if (this.chips >= minRaise) {
+      if (maxChips >= minRaise) {
         const raiseAmount = this.getRaiseAmount(minRaise, maxChips);
         return { action: 'raise', amount: raiseAmount };
       }
@@ -277,7 +275,7 @@ export class BotPlayer {
       if (canCheck) {
         return Math.random() < 0.2 ? { action: 'raise', amount: minRaise } : { action: 'check' };
       }
-      if (this.chips >= minRaise && Math.random() < 0.3) {
+      if (maxChips >= minRaise && Math.random() < 0.3) {
         return { action: 'raise', amount: minRaise };
       }
       return { action: 'call' };

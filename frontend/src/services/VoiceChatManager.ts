@@ -47,6 +47,9 @@ export class VoiceChatManager {
   async start(): Promise<void> {
     console.log('[VoiceChat] start() — requesting microphone access');
     try {
+      if (!navigator.mediaDevices) {
+        throw new Error('当前环境不支持麦克风访问（需要 HTTPS 或 localhost）');
+      }
       this.localStream = await navigator.mediaDevices.getUserMedia({ audio: {
         echoCancellation: true,
         noiseSuppression: true,

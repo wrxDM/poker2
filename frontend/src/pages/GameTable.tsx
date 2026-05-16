@@ -13,7 +13,7 @@ import { useVoiceChat } from '../hooks/useVoiceChat';
 import type { PublicRoomState, HandInfo, HandAction, ShowdownInfo } from '../types';
 
 const SEAT_POSITIONS = [
-  { bottom: '0', left: '50%', transform: 'translateX(-50%)' },        // 0 - bottom center (self)
+  { bottom: '5%', left: '50%', transform: 'translateX(-50%)' },   // 0 - bottom center (self)
   { bottom: '18%', left: '20%' },                                      // 1 - bottom left
   { bottom: '38%', left: '5%' },                                       // 2 - mid left
   { bottom: '58%', left: '5%' },                                       // 3 - top left
@@ -196,6 +196,7 @@ export function GameTable() {
   const isMyTurn = myPlayer?.seat === currentTurn;
 
   const isWaiting = currentRoom.status === 'waiting';
+  const isPlaying = currentRoom.status === 'playing';
   const canCheck = isMyTurn && myPlayer && !myPlayer.folded && !myPlayer.allin && (currentRoom.currentBet === myPlayer.bet);
   const toCall = myPlayer ?  currentRoom.currentBet - myPlayer.bet : 0;
   const canCall = isMyTurn && toCall > 0  && toCall < myPlayer?.chips && myPlayer && !myPlayer.folded && !myPlayer.allin;
@@ -207,9 +208,9 @@ export function GameTable() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-black overflow-hidden">
+    <div className="h-dvh flex flex-col bg-black" style={{ display: 'grid', gridTemplateRows: 'auto 1fr auto' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-black/80 border-b border-white/10">
+      <div className="flex items-center justify-between px-4 py-2 bg-black/80 border-b border-white/10 shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={handleLeave}
@@ -232,7 +233,7 @@ export function GameTable() {
       </div>
 
       {/* Game Table */}
-      <div className="flex-1 table-felt relative flex items-center justify-center p-4 overflow-hidden">
+      <div className="table-felt relative overflow-hidden" style={{ gridRow: '2/3' }}>
         {/* Decorative chip pattern */}
         <div className="absolute inset-0 pointer-events-none opacity-5">
           <div className="w-full h-full" style={{
@@ -241,100 +242,102 @@ export function GameTable() {
           }} />
         </div>
 
-        {/* Pot */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
-          <PotDisplay pot={pot} sidePots={sidePots} />
-        </div>
+        {/* Scaled table area */}
+        <div className="table-scaler absolute inset-0 flex flex-col gap-6">
+          {/* ── Top: Player Seats ── */}
+          <div className="relative flex-1">
+            {/* Pot — centered in seats area */}
+            <div className="absolute inset-0 flex items-center justify-center pt-0 z-10 pointer-events-none">
+              <PotDisplay pot={pot} sidePots={sidePots} />
+            </div>
 
-        {/* Community Cards */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 -mt-12 z-5">
-          <CommunityCards cards={communityCards} round={round} />
-        </div>
-
-        {/* Player Seats */}
-        {players.map((player) => (
-          <PlayerSeat
-            key={player.userId}
-            player={player}
-            isCurrentTurn={player.seat === currentTurn}
-            isDealer={player.seat === dealerSeat}
-            isSmallBlind={player.seat === currentRoom.smallBlindSeat}
-            isBigBlind={player.seat === currentRoom.bigBlindSeat}
-            isMySeat={player.userId === user?.id}
-            isSpeaking={speakingUsers.has(player.userId)}
-            position={getPosition(player.seat)}
-          />
-        ))}
-
-        {/* My hand (bottom center) */}
-        {myHand && round !== 'waiting' && (
-          <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 flex gap-1">
-            {myHand.cards.map((card, i) => (
-              <Card key={i} card={card} delay={i * 100} />
+            {/* Player Seats */}
+            {players.map((player) => (
+              <PlayerSeat
+                key={player.userId}
+                player={player}
+                isCurrentTurn={player.seat === currentTurn}
+                isDealer={player.seat === dealerSeat}
+                isSmallBlind={player.seat === currentRoom.smallBlindSeat}
+                isBigBlind={player.seat === currentRoom.bigBlindSeat}
+                isMySeat={player.userId === user?.id}
+                isSpeaking={speakingUsers.has(player.userId)}
+                position={getPosition(player.seat)}
+              />
             ))}
           </div>
-        )}
 
-        {/* Debug: myHand state */}
-        {/* <div className="absolute top-2 left-2 bg-black/80 text-green-400 text-xs font-mono p-2 rounded border border-green-500/30 z-50">
-          DEBUG myHand: {JSON.stringify(myHand)}<br/>
-          DEBUG round: {round}<br/>
-          DEBUG roomStatus: {currentRoom.status}
-        </div> */}
-
-        {/* Start game button */}
-        {isWaiting && myPlayer && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-20">
-            <div className="text-center">
-              <p className="text-white text-xl font-bold mb-4">
-                等待玩家入座... ({players.length} 人)
-              </p>
-              {/* Add bot button */}
-              <button
-                onClick={handleAddBot}
-                className="px-6 py-3 mb-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-all active:scale-95"
-              >
-                🤖 添加机器人
-              </button>
-              {players.length >= 2 && myPlayer.seat === dealerSeat && (
-                <button
-                  onClick={handleStartGame}
-                  className="block w-full px-8 py-4 bg-green-600 hover:bg-green-700 text-white font-bold text-xl rounded-2xl shadow-lg transition-all active:scale-95"
-                >
-                  🎮 开始游戏
-                </button>
-              )}
-              {players.length < 2 && (
-                <p className="text-white/60 text-sm">至少需要 2 名玩家才能开始</p>
-              )}
-            </div>
+          {/* ── Middle: Community Cards ── */}
+          <div className="relative flex items-center justify-center z-10">
+            <CommunityCards cards={communityCards} round={round} />
           </div>
-        )}
 
-        {/* Next hand button (after game finished) */}
-        {currentRoom.status === 'finished' && round === 'finished' && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-20">
-            <div className="text-center">
-              <p className="text-white text-xl font-bold mb-4">
-                本局结束 ({players.filter(p => p.chips > 0).length} 人还有筹码)
-              </p>
-              {players.filter(p => p.chips > 0).length >= 2 ? (
-                <button
-                  onClick={handleStartNextHand}
-                  className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xl rounded-2xl shadow-lg transition-all active:scale-95"
-                >
-                  ▶️ 开始下一局
-                </button>
-              ) : (
-                <p className="text-white/60 text-sm">等待更多玩家入座...</p>
-              )}
-            </div>
+          {/* ── Bottom: My Hand ── */}
+          <div className="relative flex items-end justify-center pb-3 z-20">
+            {myHand && round !== 'waiting' && (
+              <div className="flex gap-1">
+                {myHand.cards.map((card, i) => (
+                  <Card key={i} card={card} delay={i * 100} />
+                ))}
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Start game button */}
+          {isWaiting && myPlayer && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-30">
+              <div className="text-center">
+                <p className="text-white text-xl font-bold mb-4">
+                  等待玩家入座... ({players.length} 人)
+                </p>
+                {/* Add bot button */}
+                <button
+                  onClick={handleAddBot}
+                  className="px-6 py-3 mb-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-all active:scale-95"
+                >
+                  🤖 添加机器人
+                </button>
+                {players.length >= 2 && myPlayer.seat === dealerSeat && (
+                  <button
+                    onClick={handleStartGame}
+                    className="block w-full px-8 py-4 bg-green-600 hover:bg-green-700 text-white font-bold text-xl rounded-2xl shadow-lg transition-all active:scale-95"
+                  >
+                    🎮 开始游戏
+                  </button>
+                )}
+                {players.length < 2 && (
+                  <p className="text-white/60 text-sm">至少需要 2 名玩家才能开始</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Next hand button (after game finished) */}
+          {currentRoom.status === 'finished' && round === 'finished' && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-30">
+              <div className="text-center">
+                <p className="text-white text-xl font-bold mb-4">
+                  本局结束 ({players.filter(p => p.chips > 0).length} 人还有筹码)
+                </p>
+                {players.filter(p => p.chips > 0).length >= 2 ? (
+                  <button
+                    onClick={handleStartNextHand}
+                    className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xl rounded-2xl shadow-lg transition-all active:scale-95"
+                  >
+                    ▶️ 开始下一局
+                  </button>
+                ) : (
+                  <p className="text-white/60 text-sm">等待更多玩家入座...</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        {/* End table-scaler */}
       </div>
 
       {/* Action Bar */}
-      {!isWaiting && (
+      {isPlaying && (
         <ActionBar
           canCheck={canCheck}
           canCall={!!canCall}
@@ -346,6 +349,7 @@ export function GameTable() {
           isMyTurn={!!isMyTurn}
           onAction={handleAction}
           timerSeconds={timerSeconds}
+          className="shrink-0 pb-5"
         />
       )}
 

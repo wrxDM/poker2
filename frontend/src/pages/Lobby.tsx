@@ -22,8 +22,8 @@ export function Lobby() {
   const [joinRoomId, setJoinRoomId] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [createName, setCreateName] = useState('');
-  const [blindSmall, setBlindSmall] = useState(5);
-  const [blindBig, setBlindBig] = useState(10);
+  const [blindSmall, setBlindSmall] = useState(10);
+  const [blindBig, setBlindBig] = useState(20);
 
   const syncUserInfo = useCallback(async () => {
     try {
@@ -103,29 +103,29 @@ export function Lobby() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white flex flex-col">
+    <div className="h-screen h-dvh bg-gradient-to-b from-gray-900 to-black text-white flex flex-col">
       {/* Header */}
-      <header className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+      <header className="px-4 py-3 sm:px-6 sm:py-4 border-b border-white/10 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold font-display text-yellow-400">🎰 德州扑克</h1>
-          <p className="text-white/50 text-sm">多人在线</p>
+          <h1 className="text-xl sm:text-2xl font-bold font-display text-yellow-400">🎰 德州扑克</h1>
+          <p className="text-white/50 text-xs sm:text-sm">多人在线</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <button
             onClick={handleResetChips}
-            className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded-lg font-bold transition-colors"
+            className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white text-xs sm:text-sm rounded-lg font-bold transition-colors"
           >
             重置筹码
           </button>
           <div className="text-right">
-            <div className="text-white font-bold">{user.username}</div>
-            <div className="text-yellow-400 text-sm">💰 {(user.chips ?? 0).toLocaleString()} 筹码</div>
+            <div className="text-white font-bold text-sm sm:text-base">{user.username}</div>
+            <div className="text-yellow-400 text-xs sm:text-sm">💰 {(user.chips ?? 0).toLocaleString()} 筹码</div>
           </div>
         </div>
       </header>
 
       {/* Content */}
-      <main className="flex-1 p-6 overflow-auto max-w-3xl mx-auto w-full space-y-6">
+      <main className="flex-1 p-4 sm:p-6 overflow-auto max-w-3xl mx-auto w-full space-y-4 sm:space-y-6">
         {/* Create Room */}
         <section className="bg-white/5 rounded-2xl border border-white/10 p-6">
           <h2 className="text-lg font-bold text-white mb-4">🎮 创建房间</h2>

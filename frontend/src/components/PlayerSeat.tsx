@@ -33,15 +33,15 @@ export function PlayerSeat({
       style={position}
     >
       {/* Cards */}
-      <div className="flex gap-0.5">
+      {/* <div className="flex gap-0.5">
         <Card faceDown small />
         <Card faceDown small />
-      </div>
+      </div> */}
 
       {/* Player info */}
       <div
         className={`
-          flex flex-col items-center px-3 py-1.5 rounded-xl min-w-[80px]
+          relative flex flex-col items-center px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl min-w-[70px] sm:min-w-[80px]
           backdrop-blur-sm border-2 transition-all duration-200
           ${isMySeat
             ? 'bg-yellow-600/80 border-yellow-400'
@@ -55,28 +55,30 @@ export function PlayerSeat({
         `}
       >
         {/* Dealer / Turn / Blind / Bot indicator */}
-        {isDealer && (
-          <div className="absolute -top-2 -left-1 w-5 h-5 bg-yellow-500 text-black text-xs font-bold rounded-full flex items-center justify-center border border-yellow-600">
-            D
-          </div>
-        )}
-        {isSmallBlind && !isDealer && (
-          <div className="absolute -top-2 -left-1 w-5 h-5 bg-pink-500 text-white text-xs font-bold rounded-full flex items-center justify-center border border-pink-600">
-            SB
-          </div>
-        )}
-        {isBigBlind && !isDealer && (
-          <div className="absolute -top-2 -left-1 w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full flex items-center justify-center border border-blue-600">
-            BB
-          </div>
-        )}
+        <div className="absolute -top-2 -left-1 flex gap-1">
+          {isDealer && (
+            <div className="w-5 h-5 bg-yellow-500 text-black text-xs font-bold rounded-full flex items-center justify-center border border-yellow-600">
+              D
+            </div>
+          )}
+          {isSmallBlind && !isDealer && (
+            <div className="w-5 h-5 bg-pink-500 text-white text-xs font-bold rounded-full flex items-center justify-center border border-pink-600">
+              SB
+            </div>
+          )}
+          {isBigBlind && !isDealer && (
+            <div className="w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full flex items-center justify-center border border-blue-600">
+              BB
+            </div>
+          )}
+        </div>
         {player.isBot && (
-          <div className="absolute -top-2 -right-1 w-5 h-5 bg-purple-500 text-white text-xs font-bold rounded-full flex items-center justify-center border border-purple-600">
+          <div className="absolute -top-2 right-1 w-5 h-5 bg-purple-500 text-white text-xs font-bold rounded-full flex items-center justify-center border border-purple-600">
             🤖
           </div>
         )}
         {isCurrentTurn && !player.isBot && (
-          <div className="absolute -top-2 -right-1 w-5 h-5 bg-green-500 text-black text-xs font-bold rounded-full flex items-center justify-center border border-green-600 animate-pulse">
+          <div className="absolute -top-2 right-1 w-5 h-5 bg-green-500 text-black text-xs font-bold rounded-full flex items-center justify-center border border-green-600 animate-pulse">
             ▶
           </div>
         )}

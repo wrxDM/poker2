@@ -15,12 +15,17 @@
   box-sizing: border-box;
 }
 
-html, body, #root {
+html, body {
   width: 100%;
-  height: 100%;
   margin: 0;
   padding: 0;
   overflow: hidden;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
 }
 
 body {
@@ -121,4 +126,53 @@ body {
 /* Responsive table */
 @media (max-width: 640px) {
   .game-table { transform-origin: center center; }
+}
+
+/* Mobile touch optimization */
+@media (max-width: 768px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input, button, select {
+    min-height: 44px; /* iOS minimum touch target */
+  }
+
+  /* Prevent text size adjustment on orientation change */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+}
+
+/* Mobile-safe fixed positioning helpers */
+/* VoiceControls uses fixed, no extra positioning needed here */
+
+/* Game table responsive scaling */
+@media (max-width: 900px) {
+  .table-scaler {
+    transform: scale(1);
+    transform-origin: center center;
+  }
+}
+
+@media (max-width: 700px) {
+  .table-scaler {
+    transform: scale(1);
+    transform-origin: center center;
+  }
+}
+
+@media (max-width: 500px) {
+  .table-scaler {
+    transform: scale(0.85);
+    transform-origin: center center;
+  }
+}
+
+@media (max-width: 380px) {
+  .table-scaler {
+    transform: scale(0.75);
+    transform-origin: center center;
+  }
 }

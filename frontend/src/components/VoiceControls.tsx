@@ -15,10 +15,10 @@ export function VoiceControls({ speakingUsers, error, onToggleMute, onToggleDeaf
   const { isMuted, isSilenced } = useGameStore();
 
   return (
-    <div className="fixed bottom-24 right-6 z-50 flex flex-col items-end gap-2">
+    <div className="fixed bottom-20 right-3 sm:right-6 z-50 flex flex-col items-end gap-2 voice-controls">
       {/* Error toast */}
       {error && (
-        <div className="bg-red-900/90 text-red-200 text-xs px-3 py-2 rounded-lg border border-red-700 max-w-[200px]">
+        <div className="bg-red-900/90 text-red-200 text-xs px-3 py-2 rounded-lg border border-red-700 max-w-[180px] sm:max-w-[200px]">
           {error}
         </div>
       )}
@@ -27,7 +27,7 @@ export function VoiceControls({ speakingUsers, error, onToggleMute, onToggleDeaf
       <button
         onClick={onToggleDeafen}
         className={`
-          relative flex items-center justify-center w-12 h-12 rounded-full
+          relative flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full
           shadow-xl transition-all duration-200 active:scale-90
           ${isSilenced
             ? 'bg-red-900 hover:bg-red-800 border-2 border-red-500'
@@ -61,7 +61,7 @@ export function VoiceControls({ speakingUsers, error, onToggleMute, onToggleDeaf
       <button
         onClick={onToggleMute}
         className={`
-          relative flex items-center justify-center w-14 h-14 rounded-full
+          relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full
           shadow-xl transition-all duration-200 active:scale-90
           ${isMuted
             ? 'bg-gray-800 hover:bg-gray-700 border-2 border-gray-500'

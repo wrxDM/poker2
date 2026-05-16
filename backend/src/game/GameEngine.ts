@@ -99,7 +99,7 @@ export class GameEngine {
   addBot(chips: number = 500, playStyle?: 'tight' | 'loose' | 'aggressive' | 'passive'): string {
     log.debug(`addBot: 正在添加机器人，筹码: ${chips}，风格: ${playStyle || 'loose'}`);
     const botId = `bot_${uuidv4().slice(0, 8)}`;
-    const bot = new BotPlayer(botId, chips, { playStyle: playStyle || 'loose' });
+    const bot = new BotPlayer(botId, { playStyle: playStyle || 'loose' });
     this.bots.set(botId, bot);
     log.debug(`机器人实例创建: ${botId}，用户名: ${bot.username}`);
 

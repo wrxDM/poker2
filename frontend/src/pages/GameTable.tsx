@@ -48,7 +48,7 @@ export function GameTable() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Voice Chat ─────────────────────────────────────────
-  const { toggleMute, toggleDeafen, speakingUsers, remoteStreams, error: voiceError } = useVoiceChat(
+  const { toggleMute, toggleDeafen, speakingUsers, remoteStreams, error: voiceError, resetVoice } = useVoiceChat(
     user?.id ?? '',
   );
 
@@ -362,6 +362,7 @@ export function GameTable() {
         error={voiceError}
         onToggleMute={toggleMute}
         onToggleDeafen={toggleDeafen}
+        onResetVoice={resetVoice}
       />
 
       {/* Showdown Modal */}

@@ -148,7 +148,7 @@ class SocketService {
   }
 
   /** Request to re-join voice (re-initiate peer connections) */
-  async requestVoicePeers(): Promise<void> {
+  async requestVoicePeers(): Promise<{ peers: { userId: string; username: string }[] }> {
     return this.ack('voice:request_peers', {});
   }
 

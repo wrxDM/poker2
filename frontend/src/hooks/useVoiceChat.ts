@@ -32,6 +32,8 @@ export interface UseVoiceChatReturn {
   error: string | null;
   /** True once the manager has been started */
   isReady: boolean;
+  /** Reset all peer connections and re-initiate calls */
+  resetVoice: () => Promise<void>;
 }
 
 export function useVoiceChat(
@@ -92,9 +94,6 @@ export function useVoiceChat(
     manager.start().then(() => {
       setIsReady(true);
       console.log('[useVoiceChat] manager started');
-      // Sync initial mute/deafen state
-      manager.muted = isMuted;
-      manager.silenced = isSilenced;
     }).catch((err) => {
       console.error('[useVoiceChat] manager.start() failed:', err.message);
     });
@@ -224,6 +223,11 @@ export function useVoiceChat(
     setStoreSilenced(silenced);
   }, [setStoreSilenced]);
 
+  const resetVoice = useCallback(async () => {
+    console.log('[useVoiceChat] resetVoice');
+    await managerRef.current?.resetVoice();
+  }, []);
+
   return {
     isMuted,
     toggleMute,
@@ -235,5 +239,6 @@ export function useVoiceChat(
     remoteStreams,
     error,
     isReady,
+    resetVoice,
   };
 }

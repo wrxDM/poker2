@@ -201,6 +201,36 @@ export class VoiceChatManager {
     this.events.onRemoteStreamRemoved(userId);
   }
 
+  /**
+   * Full reset: close all peer connections and re-initiate calls to every peer
+   * in the current room using request_peers from the server.
+   */
+  async resetVoice(): Promise<void> {
+    console.log('[VoiceChat] resetVoice — closing all peer connections');
+    this.peerConnections.forEach((pc) => pc.close());
+    this.peerConnections.clear();
+    this.remoteAudioEls.forEach((el) => {
+      el.pause();
+      el.srcObject = null;
+    });
+    this.remoteAudioEls.clear();
+    this.speakingTimers.forEach((t) => clearTimeout(t));
+    this.speakingTimers.clear();
+    this.events.onRemoteStreamRemoved('__all__');
+
+    try {
+      const peers = await socketService.requestVoicePeers();
+      console.log(`[VoiceChat] resetVoice — got ${peers.peers?.length ?? 0} peers from server`);
+      for (const peer of peers.peers ?? []) {
+        await this.initiateCall(peer.userId).then((offer) => {
+          if (offer) socketService.emitVoiceOffer(peer.userId, offer);
+        });
+      }
+    } catch (err) {
+      console.error('[VoiceChat] resetVoice — requestVoicePeers failed:', (err as Error).message);
+    }
+  }
+
   // ── Private helpers ─────────────────────────────────────
 
   private async ensurePeer(peerId: string): Promise<RTCPeerConnection> {

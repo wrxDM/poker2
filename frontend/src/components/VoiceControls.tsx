@@ -9,9 +9,11 @@ interface VoiceControlsProps {
   onToggleMute: () => void;
   /** Click handler for deafen toggle (sound on/off — you can't hear others) */
   onToggleDeafen: () => void;
+  /** Click handler for resetting all peer connections */
+  onResetVoice: () => void;
 }
 
-export function VoiceControls({ speakingUsers, error, onToggleMute, onToggleDeafen }: VoiceControlsProps) {
+export function VoiceControls({ speakingUsers, error, onToggleMute, onToggleDeafen, onResetVoice }: VoiceControlsProps) {
   const { isMuted, isSilenced } = useGameStore();
 
   return (
@@ -98,6 +100,25 @@ export function VoiceControls({ speakingUsers, error, onToggleMute, onToggleDeaf
             <line x1="8" y1="23" x2="16" y2="23" />
           </svg>
         )}
+      </button>
+
+      {/* Reset voice connections button */}
+      <button
+        onClick={onResetVoice}
+        className="
+          flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full
+          shadow-xl transition-all duration-200 active:scale-90
+          bg-blue-900 hover:bg-blue-800 border-2 border-blue-600
+        "
+        title="重置语音连接"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          strokeLinecap="round" strokeLinejoin="round"
+          className="w-4 h-4 text-blue-300">
+          <polyline points="23 4 23 10 17 10" />
+          <polyline points="1 20 1 14 7 14" />
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+        </svg>
       </button>
 
       {/* Labels */}

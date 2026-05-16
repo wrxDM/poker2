@@ -36,5 +36,9 @@ npm-debug.log*
 # Vite cache
 frontend/.vite/
 
+# HTTPS certificates (local dev only)
+frontend/cert.pem
+frontend/key.pem
+
 # Vitest
 *.local

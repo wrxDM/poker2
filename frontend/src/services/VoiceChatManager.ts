@@ -9,6 +9,7 @@
  */
 
 import { socketService } from './socket';
+import { logger } from '../utils/logger';
 
 export interface VoiceChatEvents {
   onSpeakingUser: (userId: string, speaking: boolean) => void;
@@ -43,7 +44,7 @@ export class VoiceChatManager {
   // ── Lifecycle ───────────────────────────────────────────
 
   async start(): Promise<void> {
-    console.log('[VoiceChat] start() — requesting microphone access');
+    logger.info('VoiceChat', 'start() — requesting microphone access');
     try {
       if (!navigator.mediaDevices) {
         throw new Error('当前环境不支持麦克风访问（需要 HTTPS 或 localhost）');
@@ -53,17 +54,17 @@ export class VoiceChatManager {
         noiseSuppression: true,
         autoGainControl: true,
       }, video: false });
-      console.log('[VoiceChat] start() — mic access granted, tracks:', this.localStream.getAudioTracks().length);
+      logger.info('VoiceChat', 'start() — mic access granted, tracks:', this.localStream.getAudioTracks().length);
       this.setupAnalyser();
       this.setupLocalAudio(); // hear self for feedback
     } catch (err) {
-      console.error('[VoiceChat] start() — mic access denied:', (err as Error).message);
+      logger.error('VoiceChat', `start() — mic access denied: ${(err as Error).message}`);
       this.events.onError(new Error(`无法访问麦克风: ${(err as Error).message}`));
     }
   }
 
   stop(): void {
-    console.log('[VoiceChat] stop() — tearing down all connections');
+    logger.info('VoiceChat', 'stop() — tearing down all connections');
     this.stopAnimationLoop();
     this.audioCtx?.close();
     this.audioCtx = null;
@@ -92,8 +93,7 @@ export class VoiceChatManager {
     this.localStream?.getAudioTracks().forEach((track) => {
       track.enabled = !value;
     });
-    console.log(`[VoiceChat] remoteAudioEls size: ${this.remoteAudioEls.size}`)
-    console.log(`[VoiceChat] muted = ${value} — local mic tracks ${value ? 'disabled' : 'enabled'}`);
+    logger.info('VoiceChat', `muted = ${value} — local mic tracks ${value ? 'disabled' : 'enabled'}`);
   }
 
   // ── Deafen (silence incoming audio) ─────────────────────
@@ -110,7 +110,7 @@ export class VoiceChatManager {
     this.remoteAudioEls.forEach((el) => {
       el.volume = value ? 0 : 1;
     });
-    console.log(`[VoiceChat] silenced = ${value} — ${this.remoteAudioEls.size} remote audio els volume set to ${value ? 0 : 1}`);
+    logger.info('VoiceChat', `silenced = ${value} — ${this.remoteAudioEls.size} remote audio els volume set to ${value ? 0 : 1}`);
   }
 
   // ── Peer management ────────────────────────────────────
@@ -120,13 +120,22 @@ export class VoiceChatManager {
    * Returns the answer to be sent back through the signaling channel.
    */
   async handleOffer(fromUserId: string, offer: RTCSessionDescriptionInit): Promise<RTCSessionDescriptionInit> {
-    console.log(`[VoiceChat] handleOffer from ${fromUserId}`);
+    logger.info('VoiceChat', `handleOffer from ${fromUserId}`);
     await this.ensurePeer(fromUserId);
     const pc = this.peerConnections.get(fromUserId)!;
     await pc.setRemoteDescription(new RTCSessionDescription(offer));
     const answer = await pc.createAnswer();
+    logger.debug('VoiceChat', `— offer SDP:\n${offer.sdp}`);
+    logger.debug('VoiceChat', `— answer SDP:\n${answer.sdp}`);
+    // // 强制所有 audio transceiver 方向为 sendrecv，确保对方能收到我们的 track
+    // pc.getTransceivers().forEach((tx) => {
+    //   if (tx.sender?.track?.kind === 'audio') {
+    //     console.log(`[VoiceChat] handleOffer — setting direction from ${tx.direction} to sendrecv`);
+    //     tx.direction = 'sendrecv';
+    //   }
+    // });
     await pc.setLocalDescription(answer);
-    console.log(`[VoiceChat] handleOffer — answer created for ${fromUserId}`);
+    logger.info('VoiceChat', `handleOffer — answer created for ${fromUserId}`);
     return answer;
   }
 
@@ -136,19 +145,16 @@ export class VoiceChatManager {
   async handleAnswer(fromUserId: string, answer: RTCSessionDescriptionInit): Promise<void> {
     const pc = this.peerConnections.get(fromUserId);
     if (!pc) {
-      console.warn(`[VoiceChat] handleAnswer — no PC for ${fromUserId}`);
+      logger.warn('VoiceChat', `handleAnswer — no PC for ${fromUserId}`);
       return;
     }
+    logger.debug('VoiceChat', `— answer SDP:\n${answer.sdp}`);
+    logger.debug('VoiceChat', `— signalingState before: ${pc.signalingState}`);
     try {
-      // Avoid "invalid state transition" if already have-remote-pranswer or stable
-      const validStates = ['have-local-offer', 'have-remote-pranswer'];
-      if (!validStates.includes(pc.signalingState)) {
-        console.warn(`[VoiceChat] handleAnswer — unexpected signalingState=${pc.signalingState} for ${fromUserId}, forcing setRemoteDescription`);
-      }
       await pc.setRemoteDescription(new RTCSessionDescription(answer));
-      console.log(`[VoiceChat] handleAnswer — remote desc set for ${fromUserId}, state: ${pc.signalingState}`);
+      logger.info('VoiceChat', `handleAnswer — signalingState after: ${pc.signalingState}`);
     } catch (err) {
-      console.warn(`[VoiceChat] handleAnswer — failed for ${fromUserId}: ${(err as Error).message}, state: ${pc.signalingState}`);
+      logger.warn('VoiceChat', `handleAnswer — failed: ${(err as Error).message}, state: ${pc.signalingState}`);
     }
   }
 
@@ -158,15 +164,14 @@ export class VoiceChatManager {
   async handleIceCandidate(fromUserId: string, candidate: RTCIceCandidateInit): Promise<void> {
     const pc = this.peerConnections.get(fromUserId);
     if (!pc) {
-      console.warn(`[VoiceChat] ICE candidate for unknown peer ${fromUserId} (PC not found) — was answer dropped?`);
+      logger.warn('VoiceChat', `ICE candidate for unknown peer ${fromUserId} (PC not found) — was answer dropped?`);
       return;
     }
     try {
       await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      console.log(`[VoiceChat] ICE candidate added for ${fromUserId}: ${candidate.candidate?.slice(0, 60)}…`);
+      logger.info('VoiceChat', `ICE candidate added for ${fromUserId}: ${candidate.candidate?.slice(0, 60)}…`);
     } catch (err) {
-      // ICE candidates can arrive before remote description is set; this is benign
-      console.warn(`[VoiceChat] ICE candidate error for ${fromUserId} (may be queued): ${(err as Error).message}`);
+      logger.warn('VoiceChat', `ICE candidate error for ${fromUserId} (may be queued): ${(err as Error).message}`);
     }
   }
 
@@ -175,12 +180,17 @@ export class VoiceChatManager {
    * The caller is responsible for emitting the offer over signaling.
    */
   async initiateCall(toUserId: string): Promise<RTCSessionDescriptionInit | null> {
-    console.log(`[VoiceChat] initiateCall to ${toUserId}`);
+    logger.info('VoiceChat', `initiateCall to ${toUserId}`);
     await this.ensurePeer(toUserId);
     const pc = this.peerConnections.get(toUserId)!;
     const offer = await pc.createOffer();
+    logger.debug('VoiceChat', `initiateCall — offer SDP:\n${offer.sdp}`);
     await pc.setLocalDescription(offer);
-    console.log(`[VoiceChat] initiateCall — offer created for ${toUserId}`);
+    // 等等另一端初始化麦克风
+    const wait = (ms: number) => new Promise(() => setTimeout(() => {
+      logger.info('VoiceChat', `initiateCall — offer created for ${toUserId}`);
+    }, ms));
+    await wait(3000);
     return offer;
   }
 
@@ -188,7 +198,7 @@ export class VoiceChatManager {
    * Remove a peer (e.g., when they leave the room).
    */
   removePeer(userId: string): void {
-    console.log(`[VoiceChat] removePeer ${userId}`);
+    logger.info('VoiceChat', `removePeer ${userId}`);
     this.peerConnections.get(userId)?.close();
     this.peerConnections.delete(userId);
     const t = this.speakingTimers.get(userId);
@@ -203,7 +213,7 @@ export class VoiceChatManager {
    * in the current room using request_peers from the server.
    */
   async resetVoice(): Promise<void> {
-    console.log('[VoiceChat] resetVoice — closing all peer connections');
+    logger.info('VoiceChat', 'resetVoice — closing all peer connections');
     this.peerConnections.forEach((pc) => pc.close());
     this.peerConnections.clear();
     this.remoteAudioEls.forEach((el) => {
@@ -216,14 +226,14 @@ export class VoiceChatManager {
 
     try {
       const peers = await socketService.requestVoicePeers();
-      console.log(`[VoiceChat] resetVoice — got ${peers.peers?.length ?? 0} peers from server`);
+      logger.info('VoiceChat', `resetVoice — got ${peers.peers?.length ?? 0} peers from server`);
       for (const peer of peers.peers ?? []) {
         await this.initiateCall(peer.userId).then((offer) => {
           if (offer) socketService.emitVoiceOffer(peer.userId, offer);
         });
       }
     } catch (err) {
-      console.error('[VoiceChat] resetVoice — requestVoicePeers failed:', (err as Error).message);
+      logger.error('VoiceChat', `resetVoice — requestVoicePeers failed: ${(err as Error).message}`);
     }
   }
 
@@ -237,12 +247,14 @@ export class VoiceChatManager {
     // Add local audio tracks to new peer connections
     this.localStream?.getAudioTracks().forEach((track) => {
       pc.addTrack(track, this.localStream!);
+      logger.debug('VoiceChat', `addTrack ${track.id} to ${peerId}`);
     });
 
     pc.ontrack = (event: RTCTrackEvent) => {
       const [remoteStream] = event.streams;
+      logger.info('VoiceChat', `ontrack from ${peerId} — fired! stream: ${!!remoteStream}, tracks: ${remoteStream?.getAudioTracks().length}`);
       if (remoteStream) {
-        console.log(`[VoiceChat] ontrack from ${peerId} — ${remoteStream.getAudioTracks().length} audio tracks`);
+        logger.debug('VoiceChat', `ontrack from ${peerId} — ${remoteStream.getAudioTracks().length} audio tracks`);
         // Attach remote stream to an audio element so the user can hear the peer
         const audioEl = new Audio();
         audioEl.srcObject = remoteStream;
@@ -250,28 +262,28 @@ export class VoiceChatManager {
         audioEl.volume = this.isSilenced ? 0 : 1;
         this.remoteAudioEls.set(peerId, audioEl);
         audioEl.play()
-          .then(() => console.log(`[VoiceChat] remote audio playing for ${peerId}`))
-          .catch((e) => console.warn(`[VoiceChat] remote audio play() failed for ${peerId}:`, e.message));
+          .then(() => logger.info('VoiceChat', `remote audio playing for ${peerId}`))
+          .catch((e) => logger.warn('VoiceChat', `remote audio play() failed for ${peerId}:`, e.message));
       } else {
-        console.log(`[VoiceChat] ontrack from ${peerId} — no remote stream`);
+        logger.debug('VoiceChat', `ontrack from ${peerId} — no remote stream`);
       }
     };
 
     pc.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
       if (event.candidate) {
-        console.log(`[VoiceChat] local ICE candidate for ${peerId}: ${event.candidate.candidate?.slice(0, 60)}…`);
+        logger.debug('VoiceChat', `local ICE candidate for ${peerId}: ${event.candidate.candidate?.slice(0, 60)}…`);
         socketService.emitVoiceIceCandidate(peerId, event.candidate.toJSON());
       }
     };
 
     pc.oniceconnectionstatechange = () => {
-      console.log(`[VoiceChat] ICE state [${peerId}]: ${pc.iceConnectionState}`);
+      logger.info('VoiceChat', `ICE state [${peerId}]: ${pc.iceConnectionState}`);
     };
 
     pc.onconnectionstatechange = () => {
-      console.log(`[VoiceChat] PC state [${peerId}]: ${pc.connectionState}`);
+      logger.info('VoiceChat', `PC state [${peerId}]: ${pc.connectionState}`);
       if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) {
-        console.log(`[VoiceChat] PC [${peerId}] ${pc.connectionState} — x`);
+        logger.info('VoiceChat', `PC [${peerId}] ${pc.connectionState} — x`);
         this.removePeer(peerId);
       }
     };

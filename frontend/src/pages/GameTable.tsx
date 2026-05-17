@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { socketService } from '../services/socket';
+import { logger } from '../utils/logger';
 import { CommunityCards } from '../components/CommunityCards';
 import { PlayerSeat } from '../components/PlayerSeat';
 import { PotDisplay } from '../components/PotDisplay';
@@ -103,31 +104,31 @@ export function GameTable() {
     // Listen for room state updates
     const offState = socketService.on('room:state', (data: unknown) => {
       const d = data as { roomId: string; } & PublicRoomState;
-      console.log('[DEBUG] room:state received', { roomId: d.roomId, currentRoomId: currentRoom?.roomId, d });
+      logger.debug('GameTable', '[DEBUG] room:state received', { roomId: d.roomId, currentRoomId: currentRoom?.roomId });
       if (d.roomId === currentRoom?.roomId || !currentRoom) {
-        console.log('[DEBUG] setRoom called, myHand BEFORE:', useGameStore.getState().myHand);
+        logger.debug('GameTable', '[DEBUG] setRoom called, myHand BEFORE:', useGameStore.getState().myHand);
         setRoom(d as PublicRoomState);
         // Actively fetch my hand after room state updates
         socketService.getMyHand().then(res => {
           if ((res.cards as unknown[]).length > 0) {
             setMyHand({ cards: res.cards as HandInfo['cards'] });
-            console.log('[DEBUG] getMyHand set, myHand now:', useGameStore.getState().myHand);
+            logger.debug('GameTable', '[DEBUG] getMyHand set, myHand now:', useGameStore.getState().myHand);
           }
         }).catch(() => {});
-        console.log('[DEBUG] setRoom done, myHand AFTER:', useGameStore.getState().myHand);
+        logger.debug('GameTable', '[DEBUG] setRoom done, myHand AFTER:', useGameStore.getState().myHand);
       }
     });
 
     // Listen for showdown
     const offShowdown = socketService.on('game:showdown', (data: unknown) => {
       const d = data as { roomId: string } & ShowdownInfo;
-      console.log('[DEBUG] game:showdown received', d);
+      logger.debug('GameTable', '[DEBUG] game:showdown received', d);
       setShowdown(d);
     });
 
     // Listen for game ended
     const offEnd = socketService.on('game:ended', (_data: unknown) => {
-      console.log('[DEBUG] game:ended received');
+      logger.debug('GameTable', '[DEBUG] game:ended received');
     });
 
     return () => {
@@ -141,7 +142,7 @@ export function GameTable() {
     try {
       await socketService.takeAction(action, amount);
     } catch (err) {
-      console.error('Action failed:', err);
+      logger.error('GameTable', `Action failed: ${(err as Error).message}`);
     }
   }, []);
 
@@ -155,7 +156,7 @@ export function GameTable() {
     try {
       await socketService.startGame();
     } catch (err) {
-      console.error('Start game failed:', err);
+      logger.error('GameTable', `Start game failed: ${(err as Error).message}`);
     }
   }, []);
 
@@ -163,7 +164,7 @@ export function GameTable() {
     try {
       await socketService.startNextHand();
     } catch (err) {
-      console.error('Start next hand failed:', err);
+      logger.error('GameTable', `Start next hand failed: ${(err as Error).message}`);
     }
   }, []);
 
@@ -177,7 +178,7 @@ export function GameTable() {
     try {
       await socketService.addBot({ chips: 500, playStyle: randomStyle });
     } catch (err) {
-      console.error('Add bot failed:', err);
+      logger.error('GameTable', `Add bot failed: ${(err as Error).message}`);
     }
   }, []);
 
@@ -287,21 +288,21 @@ export function GameTable() {
           {/* Start game button */}
           {isWaiting && myPlayer && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-30">
-              <div className="text-center">
+              <div className="flex flex-col items-center gap-2">
                 <p className="text-white text-xl font-bold mb-4">
                   等待玩家入座... ({players.length} 人)
                 </p>
                 {/* Add bot button */}
                 <button
                   onClick={handleAddBot}
-                  className="px-6 py-3 mb-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-all active:scale-95"
+                  className="w-48 px-4 py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl shadow-lg transition-all active:scale-95"
                 >
                   🤖 添加机器人
                 </button>
-                {players.length >= 2 && myPlayer.seat === dealerSeat && (
+                {players.length >= 2 && (
                   <button
                     onClick={handleStartGame}
-                    className="block w-full px-8 py-4 bg-green-600 hover:bg-green-700 text-white font-bold text-xl rounded-2xl shadow-lg transition-all active:scale-95"
+                    className="w-48 px-4 py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-2xl shadow-lg transition-all active:scale-95"
                   >
                     🎮 开始游戏
                   </button>

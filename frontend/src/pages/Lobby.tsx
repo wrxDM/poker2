@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { socketService } from '../services/socket';
+import { logger } from '../utils/logger';
 import type { User } from '../types';
 
 interface RoomListItem {
@@ -30,7 +31,7 @@ export function Lobby() {
       const userInfo = await socketService.getUserInfo();
       setUser(userInfo as User, token);
     } catch (err) {
-      console.error('Sync user info failed:', err);
+      logger.error('Lobby', `Sync user info failed: ${(err as Error).message}`);
     }
   }, [token, setUser]);
 
@@ -96,7 +97,7 @@ export function Lobby() {
       const result = await socketService.resetChips();
       setChips(result.chips);
     } catch (err) {
-      console.error('Reset chips failed:', err);
+      logger.error('Lobby', `Reset chips failed: ${(err as Error).message}`);
     }
   }, [setChips]);
 

@@ -290,25 +290,33 @@ export class GameEngine {
   }
 
   private postBlinds(): void {
-    log.debug('[postBlinds] 开始下盲注...');
+    log.debug('[postBlinds] 开始下注...');
     const players = this.room.players;
 
     // Small blind: dealer seat
     const sbSeat = this.room.smallBlindSeat;
-    const sbPlayer = players.find(p => p.seat === sbSeat);
-    if (sbPlayer) {
-      const sbAmount = Math.min(this.room.blindSmall, sbPlayer.chips);
-      this.betManager.addBet(sbPlayer, sbAmount);
-      log.debug(`[postBlinds] 小盲: ${sbPlayer.username} 下注 ${sbAmount}，剩余筹码: ${sbPlayer.chips}`);
+    if (sbSeat === -1) {
+      log.warn('[postBlinds] 小盲座位为 -1，跳过小盲下注');
+    } else {
+      const sbPlayer = players.find(p => p.seat === sbSeat);
+      if (sbPlayer) {
+        const sbAmount = Math.min(this.room.blindSmall, sbPlayer.chips);
+        this.betManager.addBet(sbPlayer, sbAmount);
+        log.debug(`[postBlinds] 小盲: ${sbPlayer.username} 下注 ${sbAmount}，剩余筹码: ${sbPlayer.chips}`);
+      }
     }
 
     // Big blind: seat after dealer
-    const bbSeat = this.getNextActiveSeat(sbSeat);
-    const bbPlayer = players.find(p => p.seat === bbSeat);
-    if (bbPlayer) {
-      const bbAmount = Math.min(this.room.blindBig, bbPlayer.chips);
-      this.betManager.addBet(bbPlayer, bbAmount);
-      log.debug(`[postBlinds] 大盲: ${bbPlayer.username} 下注 ${bbAmount}，剩余筹码: ${bbPlayer.chips}`);
+    const bbSeat = this.room.bigBlindSeat;
+    if (bbSeat === -1) {
+      log.warn('[postBlinds] 大盲座位为 -1，跳过大盲下注');
+    } else {
+      const bbPlayer = players.find(p => p.seat === bbSeat);
+      if (bbPlayer) {
+        const bbAmount = Math.min(this.room.blindBig, bbPlayer.chips);
+        this.betManager.addBet(bbPlayer, bbAmount);
+        log.debug(`[postBlinds] 大盲: ${bbPlayer.username} 下注 ${bbAmount}，剩余筹码: ${bbPlayer.chips}`);
+      }
     }
     log.debug(`[postBlinds] 盲注完成，当前底池: ${this.room.pot}，当前下注: ${this.betManager.getCurrentBet()}`);
   }
@@ -537,6 +545,12 @@ export class GameEngine {
       // 轮到下一个玩家
       const prevTurn = this.room.currentTurn;
       this.room.currentTurn = this.getNextActiveSeat(this.room.currentTurn);
+      if (this.room.currentTurn === -1) {
+        log.warn('[advanceGame] 没有活跃玩家，直接进入摊牌');
+        this.room.round = 'showdown';
+        this.showdown();
+        return;
+      }
       const nextPlayer = this.room.players.find(p => p.seat === this.room.currentTurn);
       log.debug(`[advanceGame] 轮到下一玩家: ${prevTurn} -> ${this.room.currentTurn} (${nextPlayer?.username})`);
     }

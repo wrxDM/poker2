@@ -9,6 +9,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { VoiceChatManager } from '../services/VoiceChatManager';
 import { socketService } from '../services/socket';
 import { useGameStore } from '../store/gameStore';
+import { logger } from '../utils/logger';
 import type { PlayerPublic } from '../types';
 
 export interface UseVoiceChatReturn {
@@ -26,8 +27,6 @@ export interface UseVoiceChatReturn {
   setSilenced: (silenced: boolean) => void;
   /** IDs of players currently speaking */
   speakingUsers: Set<string>;
-  /** All connected remote streams (userId -> stream) */
-  remoteStreams: Map<string, MediaStream>;
   /** Error message if voice init failed */
   error: string | null;
   /** True once the manager has been started */
@@ -49,11 +48,11 @@ export function useVoiceChat(
   // ── Initialise / teardown manager ───────────────────────
 
   useEffect(() => {
-    console.log(`[useVoiceChat] mounted, userId=${currentUserId}`);
+    logger.info('useVoiceChat', `mounted, userId=${currentUserId}`);
     const manager = new VoiceChatManager(currentUserId, {
       onSpeakingUser: (userId, speaking) => {
         if (speaking) {
-          console.log(`[useVoiceChat] speaking: ${userId}`);
+          logger.info('useVoiceChat', `speaking: ${userId}`);
         }
         setSpeakingUsers((prev) => {
           const next = new Set(prev);
@@ -61,14 +60,9 @@ export function useVoiceChat(
           else next.delete(userId);
           return next;
         });
-        setSpeakingUsers((prev) => {
-          const next = new Set(prev);
-          next.delete(userId);
-          return next;
-        });
       },
       onError: (err) => {
-        console.error('[useVoiceChat] manager error:', err.message);
+        logger.error('useVoiceChat', `manager error: ${err.message}`);
         setError(err.message);
       },
     });
@@ -76,13 +70,14 @@ export function useVoiceChat(
     managerRef.current = manager;
     manager.start().then(() => {
       setIsReady(true);
-      console.log('[useVoiceChat] manager started');
+      logger.info('useVoiceChat', 'manager started');
     }).catch((err) => {
-      console.error('[useVoiceChat] manager.start() failed:', err.message);
+      logger.error('useVoiceChat', `manager.start() failed: ${err.message}`);
     });
 
     return () => {
-      console.log('[useVoiceChat] unmounting');
+      logger.info('useVoiceChat', 'unmounting');
+      setIsReady(false);
       manager.stop();
       managerRef.current = null;
     };
@@ -94,7 +89,7 @@ export function useVoiceChat(
   useEffect(() => {
     if (managerRef.current) {
       managerRef.current.muted = isMuted;
-      console.log(`[useVoiceChat] sync muted → ${isMuted} (manager updated, emitting)`);
+      logger.info('useVoiceChat', `sync muted → ${isMuted} (manager updated, emitting)`);
     }
     socketService.emitMuteChanged(isMuted);
   }, [isMuted]);
@@ -104,7 +99,7 @@ export function useVoiceChat(
   useEffect(() => {
     if (managerRef.current) {
       managerRef.current.silenced = isSilenced;
-      console.log(`[useVoiceChat] sync silenced → ${isSilenced} (manager updated)`);
+      logger.info('useVoiceChat', `sync silenced → ${isSilenced} (manager updated)`);
     }
   }, [isSilenced]);
 
@@ -113,7 +108,7 @@ export function useVoiceChat(
   useEffect(() => {
     const offOffer = socketService.on('voice:offer', (data: unknown) => {
       const { fromUserId, offer } = data as { fromUserId: string; offer: RTCSessionDescriptionInit };
-      console.log(`[useVoiceChat] voice:offer from ${fromUserId}`);
+      logger.info('useVoiceChat', `voice:offer from ${fromUserId}`);
       managerRef.current?.handleOffer(fromUserId, offer).then((answer) => {
         socketService.emitVoiceAnswer(fromUserId, answer);
       });
@@ -121,7 +116,7 @@ export function useVoiceChat(
 
     const offAnswer = socketService.on('voice:answer', (data: unknown) => {
       const { fromUserId, answer } = data as { fromUserId: string; answer: RTCSessionDescriptionInit };
-      console.log(`[useVoiceChat] voice:answer from ${fromUserId}`);
+      logger.info('useVoiceChat', `voice:answer from ${fromUserId}`);
       managerRef.current?.handleAnswer(fromUserId, answer);
     });
 
@@ -132,7 +127,7 @@ export function useVoiceChat(
 
     const offMuteChanged = socketService.on('voice:mute_changed', (data: unknown) => {
       const { userId, muted } = data as { userId: string; muted: boolean };
-      console.log(`[useVoiceChat] voice:mute_changed — ${userId} muted=${muted}`);
+      logger.info('useVoiceChat', `voice:mute_changed — ${userId} muted=${muted}`);
       // Store mute state of remote users in the player list — consumed by PlayerSeat
       useGameStore.setState((state) => {
         if (!state.currentRoom) return {};
@@ -162,7 +157,7 @@ export function useVoiceChat(
     const offJoined = socketService.on('room:player_joined', (data: unknown) => {
       const { player } = data as { player: PlayerPublic };
       if (player?.userId && player.userId !== currentUserId) {
-        console.log(`[useVoiceChat] room:player_joined — initiating call to ${player.userId}`);
+        logger.info('useVoiceChat', `room:player_joined — initiating call to ${player.userId}`);
         managerRef.current?.initiateCall(player.userId).then((offer) => {
           if (offer) socketService.emitVoiceOffer(player.userId, offer);
         });
@@ -176,7 +171,7 @@ export function useVoiceChat(
   useEffect(() => {
     const offLeft = socketService.on('room:player_left', (data: unknown) => {
       const { userId } = data as { userId: string };
-      console.log(`[useVoiceChat] room:player_left — ${userId}`);
+      logger.info('useVoiceChat', `room:player_left — ${userId}`);
       managerRef.current?.removePeer(userId);
     });
     return () => offLeft();
@@ -186,38 +181,38 @@ export function useVoiceChat(
 
   const toggleMute = useCallback(() => {
     const next = !isMuted;
-    console.log(`[useVoiceChat] toggleMute: ${isMuted} → ${next}`);
+    logger.info('useVoiceChat', `toggleMute: ${isMuted} → ${next}`);
     setStoreMuted(next);
   }, [isMuted, setStoreMuted]);
 
   const setMutedFn = useCallback((muted: boolean) => {
-    console.log(`[useVoiceChat] setMute: ${muted}`);
+    logger.info('useVoiceChat', `setMute: ${muted}`);
     setStoreMuted(muted);
   }, [setStoreMuted]);
 
   const toggleDeafen = useCallback(() => {
     const next = !isSilenced;
-    console.log(`[useVoiceChat] toggleDeafen: ${isSilenced} → ${next}`);
+    logger.info('useVoiceChat', `toggleDeafen: ${isSilenced} → ${next}`);
     setStoreSilenced(next);
   }, [isSilenced, setStoreSilenced]);
 
   const setSilencedFn = useCallback((silenced: boolean) => {
-    console.log(`[useVoiceChat] setSilenced: ${silenced}`);
+    logger.info('useVoiceChat', `setSilenced: ${silenced}`);
     setStoreSilenced(silenced);
   }, [setStoreSilenced]);
 
   const resetVoice = useCallback(async () => {
-    console.log('[useVoiceChat] resetVoice');
+    logger.info('useVoiceChat', 'resetVoice');
     await managerRef.current?.resetVoice();
   }, []);
 
   return {
     isMuted,
     toggleMute,
-    setMuted: setMutedFn,
+    setMuted: setStoreMuted,
     isSilenced,
     toggleDeafen,
-    setSilenced: setSilencedFn,
+    setSilenced: setStoreSilenced,
     speakingUsers,
     error,
     isReady,

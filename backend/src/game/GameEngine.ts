@@ -419,7 +419,7 @@ export class GameEngine {
       }
 
       case 'allin': {
-        const allInAmount = player.chips - player.bet;
+        const allInAmount = player.chips;
         player.allin = true;
         this.betManager.addBet(player, allInAmount);
         player.lastAction = 'allin';
@@ -460,7 +460,7 @@ export class GameEngine {
         winners: [{
           playerId: winner.userId,
           username: winner.username,
-          hand: winner.hand ?? [],
+          hand: [],  // 这种情况下不显示手牌
           evaluatedHand: { rank: 'high_card' as const, score: 0, kickers: [], description: '对手弃牌获胜' },
           amount: finalPot,
         }],
@@ -545,12 +545,6 @@ export class GameEngine {
       // 轮到下一个玩家
       const prevTurn = this.room.currentTurn;
       this.room.currentTurn = this.getNextActiveSeat(this.room.currentTurn);
-      if (this.room.currentTurn === -1) {
-        log.warn('[advanceGame] 没有活跃玩家，直接进入摊牌');
-        this.room.round = 'showdown';
-        this.showdown();
-        return;
-      }
       const nextPlayer = this.room.players.find(p => p.seat === this.room.currentTurn);
       log.debug(`[advanceGame] 轮到下一玩家: ${prevTurn} -> ${this.room.currentTurn} (${nextPlayer?.username})`);
     }
@@ -660,7 +654,9 @@ export class GameEngine {
   private getNextActiveSeat(from: number): number {
     const activePlayers = this.room.players.filter(p => !p.folded && !p.allin);
     if (activePlayers.length === 0) {
-      log.debug(`[getNextActiveSeat] 没有活跃玩家，返回 -1`);
+      log.warn('[getNextActiveSeat] 没有活跃玩家，直接进入摊牌');
+      this.room.round = 'showdown';
+      this.showdown();
       return -1;
     }
     this.startActionTimer()

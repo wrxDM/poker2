@@ -193,7 +193,7 @@ export function ActionBar({
             onClick={() => onAction('allin')}
             className={`${btnClass(hasTimer, count)} action-btn-allin`}
           >
-            全下
+            ALL-IN
           </button>
         )}
       </div>

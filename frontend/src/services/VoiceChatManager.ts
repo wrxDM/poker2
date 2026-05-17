@@ -57,6 +57,7 @@ export class VoiceChatManager {
       logger.info('VoiceChat', 'start() — mic access granted, tracks:', this.localStream.getAudioTracks().length);
       this.setupAnalyser();
       this.setupLocalAudio(); // hear self for feedback
+      await this.initiateCallToPeers();
     } catch (err) {
       logger.error('VoiceChat', `start() — mic access denied: ${(err as Error).message}`);
       this.events.onError(new Error(`无法访问麦克风: ${(err as Error).message}`));
@@ -110,7 +111,6 @@ export class VoiceChatManager {
     this.remoteAudioEls.forEach((el) => {
       el.volume = value ? 0 : 1;
     });
-    logger.info('VoiceChat', `silenced = ${value} — ${this.remoteAudioEls.size} remote audio els volume set to ${value ? 0 : 1}`);
   }
 
   // ── Peer management ────────────────────────────────────
@@ -127,13 +127,6 @@ export class VoiceChatManager {
     const answer = await pc.createAnswer();
     logger.debug('VoiceChat', `— offer SDP:\n${offer.sdp}`);
     logger.debug('VoiceChat', `— answer SDP:\n${answer.sdp}`);
-    // // 强制所有 audio transceiver 方向为 sendrecv，确保对方能收到我们的 track
-    // pc.getTransceivers().forEach((tx) => {
-    //   if (tx.sender?.track?.kind === 'audio') {
-    //     console.log(`[VoiceChat] handleOffer — setting direction from ${tx.direction} to sendrecv`);
-    //     tx.direction = 'sendrecv';
-    //   }
-    // });
     await pc.setLocalDescription(answer);
     logger.info('VoiceChat', `handleOffer — answer created for ${fromUserId}`);
     return answer;
@@ -162,11 +155,7 @@ export class VoiceChatManager {
    * Called when the server relays an ICE candidate from a remote peer.
    */
   async handleIceCandidate(fromUserId: string, candidate: RTCIceCandidateInit): Promise<void> {
-    const pc = this.peerConnections.get(fromUserId);
-    if (!pc) {
-      logger.warn('VoiceChat', `ICE candidate for unknown peer ${fromUserId} (PC not found) — was answer dropped?`);
-      return;
-    }
+    const pc = this.peerConnections.get(fromUserId)!;
     try {
       await pc.addIceCandidate(new RTCIceCandidate(candidate));
       logger.info('VoiceChat', `ICE candidate added for ${fromUserId}: ${candidate.candidate?.slice(0, 60)}…`);
@@ -186,11 +175,6 @@ export class VoiceChatManager {
     const offer = await pc.createOffer();
     logger.debug('VoiceChat', `initiateCall — offer SDP:\n${offer.sdp}`);
     await pc.setLocalDescription(offer);
-    // 等等另一端初始化麦克风
-    const wait = (ms: number) => new Promise(() => setTimeout(() => {
-      logger.info('VoiceChat', `initiateCall — offer created for ${toUserId}`);
-    }, ms));
-    await wait(3000);
     return offer;
   }
 
@@ -224,18 +208,22 @@ export class VoiceChatManager {
     this.speakingTimers.forEach((t) => clearTimeout(t));
     this.speakingTimers.clear();
 
-    try {
-      const peers = await socketService.requestVoicePeers();
-      logger.info('VoiceChat', `resetVoice — got ${peers.peers?.length ?? 0} peers from server`);
-      for (const peer of peers.peers ?? []) {
-        await this.initiateCall(peer.userId).then((offer) => {
-          if (offer) socketService.emitVoiceOffer(peer.userId, offer);
-        });
-      }
-    } catch (err) {
-      logger.error('VoiceChat', `resetVoice — requestVoicePeers failed: ${(err as Error).message}`);
-    }
+    await this.initiateCallToPeers();
   }
+
+private async initiateCallToPeers(): Promise<void> {
+  try {
+    const peers = await socketService.requestVoicePeers();
+    logger.info('VoiceChat', `resetVoice — got ${peers.peers?.length ?? 0} peers from server`);
+    for (const peer of peers.peers ?? []) {
+      await this.initiateCall(peer.userId).then((offer) => {
+        if (offer) socketService.emitVoiceOffer(peer.userId, offer);
+      });
+    }
+  } catch (err) {
+    logger.error('VoiceChat', `resetVoice — requestVoicePeers failed: ${(err as Error).message}`);
+  }
+}
 
   // ── Private helpers ─────────────────────────────────────
 
@@ -244,15 +232,8 @@ export class VoiceChatManager {
 
     const pc = new RTCPeerConnection(ICE_SERVERS);
 
-    // Add local audio tracks to new peer connections
-    this.localStream?.getAudioTracks().forEach((track) => {
-      pc.addTrack(track, this.localStream!);
-      logger.debug('VoiceChat', `addTrack ${track.id} to ${peerId}`);
-    });
-
     pc.ontrack = (event: RTCTrackEvent) => {
       const [remoteStream] = event.streams;
-      logger.info('VoiceChat', `ontrack from ${peerId} — fired! stream: ${!!remoteStream}, tracks: ${remoteStream?.getAudioTracks().length}`);
       if (remoteStream) {
         logger.debug('VoiceChat', `ontrack from ${peerId} — ${remoteStream.getAudioTracks().length} audio tracks`);
         // Attach remote stream to an audio element so the user can hear the peer
@@ -287,6 +268,18 @@ export class VoiceChatManager {
         this.removePeer(peerId);
       }
     };
+
+    // while (this.localStream === null) {
+    //   await new Promise(() => setTimeout(() => {
+    //     logger.info('VoiceChat', `ensurePeer, waiting for local stream, delay 1000ms`);
+    //   }, 1000));
+    // }
+
+    // Add local audio tracks to new peer connections
+    this.localStream?.getAudioTracks().forEach((track) => {
+      pc.addTrack(track, this.localStream!);
+      logger.debug('VoiceChat', `addTrack ${track.id} to ${peerId}`);
+    });
 
     this.peerConnections.set(peerId, pc);
     return pc;

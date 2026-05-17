@@ -10,7 +10,7 @@ import { VoiceChatManager } from '../services/VoiceChatManager';
 import { socketService } from '../services/socket';
 import { useGameStore } from '../store/gameStore';
 import { logger } from '../utils/logger';
-import type { PlayerPublic } from '../types';
+
 
 export interface UseVoiceChatReturn {
   /** Whether the local user is muted (others can't hear them) */
@@ -150,22 +150,6 @@ export function useVoiceChat(
     };
   }, []);
 
-  // ── Initiate calls when new players join ─────────────
-
-  useEffect(() => {
-    if (!isReady) return;
-    const offJoined = socketService.on('room:player_joined', (data: unknown) => {
-      const { player } = data as { player: PlayerPublic };
-      if (player?.userId && player.userId !== currentUserId) {
-        logger.info('useVoiceChat', `room:player_joined — initiating call to ${player.userId}`);
-        managerRef.current?.initiateCall(player.userId).then((offer) => {
-          if (offer) socketService.emitVoiceOffer(player.userId, offer);
-        });
-      }
-    });
-    return () => offJoined();
-  }, [isReady, currentUserId]);
-
   // ── Remove peers when players leave ─────────────────
 
   useEffect(() => {
@@ -185,21 +169,11 @@ export function useVoiceChat(
     setStoreMuted(next);
   }, [isMuted, setStoreMuted]);
 
-  const setMutedFn = useCallback((muted: boolean) => {
-    logger.info('useVoiceChat', `setMute: ${muted}`);
-    setStoreMuted(muted);
-  }, [setStoreMuted]);
-
   const toggleDeafen = useCallback(() => {
     const next = !isSilenced;
     logger.info('useVoiceChat', `toggleDeafen: ${isSilenced} → ${next}`);
     setStoreSilenced(next);
   }, [isSilenced, setStoreSilenced]);
-
-  const setSilencedFn = useCallback((silenced: boolean) => {
-    logger.info('useVoiceChat', `setSilenced: ${silenced}`);
-    setStoreSilenced(silenced);
-  }, [setStoreSilenced]);
 
   const resetVoice = useCallback(async () => {
     logger.info('useVoiceChat', 'resetVoice');

@@ -99,7 +99,7 @@ export class GameEngine {
   addBot(chips: number = 500, playStyle?: 'tight' | 'loose' | 'aggressive' | 'passive'): string {
     log.debug(`addBot: 正在添加机器人，筹码: ${chips}，风格: ${playStyle || 'loose'}`);
     const botId = `bot_${uuidv4().slice(0, 8)}`;
-    const bot = new BotPlayer(botId, chips, { playStyle: playStyle || 'loose' });
+    const bot = new BotPlayer(botId, { playStyle: playStyle || 'loose' });
     this.bots.set(botId, bot);
     log.debug(`机器人实例创建: ${botId}，用户名: ${bot.username}`);
 
@@ -290,25 +290,33 @@ export class GameEngine {
   }
 
   private postBlinds(): void {
-    log.debug('[postBlinds] 开始下盲注...');
+    log.debug('[postBlinds] 开始下注...');
     const players = this.room.players;
 
     // Small blind: dealer seat
     const sbSeat = this.room.smallBlindSeat;
-    const sbPlayer = players.find(p => p.seat === sbSeat);
-    if (sbPlayer) {
-      const sbAmount = Math.min(this.room.blindSmall, sbPlayer.chips);
-      this.betManager.addBet(sbPlayer, sbAmount);
-      log.debug(`[postBlinds] 小盲: ${sbPlayer.username} 下注 ${sbAmount}，剩余筹码: ${sbPlayer.chips}`);
+    if (sbSeat === -1) {
+      log.warn('[postBlinds] 小盲座位为 -1，跳过小盲下注');
+    } else {
+      const sbPlayer = players.find(p => p.seat === sbSeat);
+      if (sbPlayer) {
+        const sbAmount = Math.min(this.room.blindSmall, sbPlayer.chips);
+        this.betManager.addBet(sbPlayer, sbAmount);
+        log.debug(`[postBlinds] 小盲: ${sbPlayer.username} 下注 ${sbAmount}，剩余筹码: ${sbPlayer.chips}`);
+      }
     }
 
     // Big blind: seat after dealer
-    const bbSeat = this.getNextActiveSeat(sbSeat);
-    const bbPlayer = players.find(p => p.seat === bbSeat);
-    if (bbPlayer) {
-      const bbAmount = Math.min(this.room.blindBig, bbPlayer.chips);
-      this.betManager.addBet(bbPlayer, bbAmount);
-      log.debug(`[postBlinds] 大盲: ${bbPlayer.username} 下注 ${bbAmount}，剩余筹码: ${bbPlayer.chips}`);
+    const bbSeat = this.room.bigBlindSeat;
+    if (bbSeat === -1) {
+      log.warn('[postBlinds] 大盲座位为 -1，跳过大盲下注');
+    } else {
+      const bbPlayer = players.find(p => p.seat === bbSeat);
+      if (bbPlayer) {
+        const bbAmount = Math.min(this.room.blindBig, bbPlayer.chips);
+        this.betManager.addBet(bbPlayer, bbAmount);
+        log.debug(`[postBlinds] 大盲: ${bbPlayer.username} 下注 ${bbAmount}，剩余筹码: ${bbPlayer.chips}`);
+      }
     }
     log.debug(`[postBlinds] 盲注完成，当前底池: ${this.room.pot}，当前下注: ${this.betManager.getCurrentBet()}`);
   }
@@ -411,7 +419,7 @@ export class GameEngine {
       }
 
       case 'allin': {
-        const allInAmount = player.chips - player.bet;
+        const allInAmount = player.chips;
         player.allin = true;
         this.betManager.addBet(player, allInAmount);
         player.lastAction = 'allin';
@@ -425,6 +433,7 @@ export class GameEngine {
   }
 
   private advanceGame(): void {
+    if (this.room.status != 'playing') return;
     log.debug('[advanceGame] ===== 游戏流程推进 =====');
     // 清除当前回合的计时器
     this.clearActionTimer();
@@ -452,7 +461,7 @@ export class GameEngine {
         winners: [{
           playerId: winner.userId,
           username: winner.username,
-          hand: winner.hand ?? [],
+          hand: [],  // 这种情况下不显示手牌
           evaluatedHand: { rank: 'high_card' as const, score: 0, kickers: [], description: '对手弃牌获胜' },
           amount: finalPot,
         }],
@@ -646,10 +655,12 @@ export class GameEngine {
   private getNextActiveSeat(from: number): number {
     const activePlayers = this.room.players.filter(p => !p.folded && !p.allin);
     if (activePlayers.length === 0) {
-      log.debug(`[getNextActiveSeat] 没有活跃玩家，返回 -1`);
+      log.warn('[getNextActiveSeat] 没有活跃玩家，直接进入摊牌');
+      this.room.round = 'showdown';
+      this.showdown();
       return -1;
     }
-    this.startActionTimer()
+    this.startActionTimer();
 
     const sortedSeats = activePlayers.map(p => p.seat).sort((a, b) => a - b);
     log.debug(`[getNextActiveSeat] 活跃玩家座位: ${sortedSeats.join(', ')}，从座位 ${from} 找下一个`);
@@ -780,6 +791,7 @@ export class GameEngine {
   }
 
   private onActionTimeout(): void {
+    if (this.room.status === 'finished') return;
     log.debug('[onActionTimeout] 行动超时触发');
     const currentPlayer = this.room.players.find(p => p.seat === this.room.currentTurn);
     if (currentPlayer && !currentPlayer.folded && !currentPlayer.allin) {

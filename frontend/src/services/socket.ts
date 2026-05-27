@@ -1,4 +1,5 @@
 import { io, Socket } from 'socket.io-client';
+import { logger } from '../utils/logger';
 import type { PublicRoomState, HandAction } from '../types';
 
 class SocketService {
@@ -25,12 +26,12 @@ class SocketService {
       });
 
       this.socket.on('connect', () => {
-        console.log('[Socket] Connected');
+        logger.info('Socket', 'Connected');
         resolve();
       });
 
       this.socket.on('connect_error', (err) => {
-        console.error('[Socket] Connect error:', err.message);
+        logger.error('Socket', `Connect error: ${err.message}`);
         reject(err);
       });
 
@@ -148,7 +149,7 @@ class SocketService {
   }
 
   /** Request to re-join voice (re-initiate peer connections) */
-  async requestVoicePeers(): Promise<void> {
+  async requestVoicePeers(): Promise<{ peers: { userId: string; username: string }[] }> {
     return this.ack('voice:request_peers', {});
   }
 

@@ -13,7 +13,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'poker-secret';
 const app = express();
 const httpServer = createServer(app);
 
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
 const userService = new UserService(JWT_SECRET);
@@ -28,7 +28,7 @@ const roomManager = new RoomManager(
 
 const io = new Server(httpServer, {
   cors: {
-    origin: 'http://localhost:5173',
+    origin: '*',
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -83,6 +83,6 @@ app.get('/api/rooms', (_, res) => {
   res.json({ rooms });
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`🎰 Poker server running on http://localhost:${PORT}`);
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`🎰 Poker server running on http://0.0.0.0:${PORT}`);
 });

@@ -9,16 +9,18 @@ interface VoiceControlsProps {
   onToggleMute: () => void;
   /** Click handler for deafen toggle (sound on/off — you can't hear others) */
   onToggleDeafen: () => void;
+  /** Click handler for resetting all peer connections */
+  onResetVoice: () => void;
 }
 
-export function VoiceControls({ speakingUsers, error, onToggleMute, onToggleDeafen }: VoiceControlsProps) {
+export function VoiceControls({ speakingUsers, error, onToggleMute, onToggleDeafen, onResetVoice }: VoiceControlsProps) {
   const { isMuted, isSilenced } = useGameStore();
 
   return (
-    <div className="fixed bottom-24 right-6 z-50 flex flex-col items-end gap-2">
+    <div className="fixed bottom-20 right-3 sm:right-6 z-50 flex flex-col items-end gap-2 voice-controls">
       {/* Error toast */}
       {error && (
-        <div className="bg-red-900/90 text-red-200 text-xs px-3 py-2 rounded-lg border border-red-700 max-w-[200px]">
+        <div className="bg-red-900/90 text-red-200 text-xs px-3 py-2 rounded-lg border border-red-700 max-w-[180px] sm:max-w-[200px]">
           {error}
         </div>
       )}
@@ -61,11 +63,11 @@ export function VoiceControls({ speakingUsers, error, onToggleMute, onToggleDeaf
       <button
         onClick={onToggleMute}
         className={`
-          relative flex items-center justify-center w-14 h-14 rounded-full
+          relative flex items-center justify-center w-12 h-12 rounded-full
           shadow-xl transition-all duration-200 active:scale-90
           ${isMuted
-            ? 'bg-gray-800 hover:bg-gray-700 border-2 border-gray-500'
-            : 'bg-green-700 hover:bg-green-600 border-2 border-green-400'
+            ? 'bg-red-900 hover:bg-red-800 border-2 border-red-500'
+            : 'bg-gray-700 hover:bg-gray-600 border-2 border-gray-500'
           }
         `}
         title={isMuted ? '解除闭麦' : '闭麦（他人听不见你）'}
@@ -98,6 +100,25 @@ export function VoiceControls({ speakingUsers, error, onToggleMute, onToggleDeaf
             <line x1="8" y1="23" x2="16" y2="23" />
           </svg>
         )}
+      </button>
+
+      {/* Reset voice connections button */}
+      <button
+        onClick={onResetVoice}
+        className="
+          flex items-center justify-center w-12 h-12 rounded-full
+          shadow-xl transition-all duration-200 active:scale-90
+          bg-blue-900 hover:bg-blue-800 border-2 border-blue-600
+        "
+        title="重置语音连接"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          strokeLinecap="round" strokeLinejoin="round"
+          className="w-5 h-5 text-blue-300">
+          <polyline points="23 4 23 10 17 10" />
+          <polyline points="1 20 1 14 7 14" />
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+        </svg>
       </button>
 
       {/* Labels */}

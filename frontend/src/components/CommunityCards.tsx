@@ -17,11 +17,11 @@ const ROUND_LABELS: Record<string, string> = {
 
 export function CommunityCards({ cards, round }: CommunityCardsProps) {
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-1 sm:gap-2">
       <span className="text-white/60 text-xs font-medium uppercase tracking-widest">
         {ROUND_LABELS[round] || round}
       </span>
-      <div className="flex gap-2 p-4 bg-black/20 rounded-2xl border border-white/10">
+      <div className="flex gap-1 sm:gap-2 p-2 sm:p-4 bg-black/20 rounded-2xl border border-white/10">
         {[0, 1, 2, 3, 4].map((i) => (
           <Card
             key={i}

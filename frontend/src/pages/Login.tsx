@@ -8,7 +8,7 @@ export function Login() {
   const { token, setUser } = useGameStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('123456');
-  const [showPassword, setShowPassword] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -63,7 +63,7 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-950 to-black text-white flex flex-col items-center justify-center p-4">
+    <div className="h-screen h-dvh bg-gradient-to-b from-gray-900 via-gray-950 to-black text-white flex flex-col items-center justify-center p-4">
       {/* Background decoration */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl" />

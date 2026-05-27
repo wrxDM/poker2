@@ -70,10 +70,6 @@ export function setupSocketHandlers(io: Server, roomManager: RoomManager, userSe
       }
       const state = result.engine!.getPublicState();
       socket.join(state.roomId);
-      // Notify others
-      socket.to(state.roomId).emit('room:player_joined', {
-        player: state.players.find(p => p.userId === userId),
-      });
       ack({ success: true, room: state });
     });
 

@@ -433,6 +433,7 @@ export class GameEngine {
   }
 
   private advanceGame(): void {
+    if (this.room.status != 'playing') return;
     log.debug('[advanceGame] ===== 游戏流程推进 =====');
     // 清除当前回合的计时器
     this.clearActionTimer();
@@ -659,7 +660,7 @@ export class GameEngine {
       this.showdown();
       return -1;
     }
-    this.startActionTimer()
+    this.startActionTimer();
 
     const sortedSeats = activePlayers.map(p => p.seat).sort((a, b) => a - b);
     log.debug(`[getNextActiveSeat] 活跃玩家座位: ${sortedSeats.join(', ')}，从座位 ${from} 找下一个`);
@@ -790,6 +791,7 @@ export class GameEngine {
   }
 
   private onActionTimeout(): void {
+    if (this.room.status === 'finished') return;
     log.debug('[onActionTimeout] 行动超时触发');
     const currentPlayer = this.room.players.find(p => p.seat === this.room.currentTurn);
     if (currentPlayer && !currentPlayer.folded && !currentPlayer.allin) {
